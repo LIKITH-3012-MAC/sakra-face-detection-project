@@ -11,11 +11,15 @@ const client = axios.create({
   },
 });
 
-// Request interceptor to attach JWT authorization bearer token
+// Request interceptor to attach JWT authorization bearer token & API master passkey
 client.interceptors.request.use((config) => {
   const token = localStorage.getItem('sakra_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  const passkey = import.meta.env.VITE_API_PASSKEY || 'Mom';
+  if (passkey) {
+    config.headers['X-API-Passkey'] = passkey;
   }
   return config;
 });

@@ -143,6 +143,21 @@ class ApiPasskeyMiddleware(BaseHTTPMiddleware):
         if provided_passkey and configured_passkey:
             valid = secrets.compare_digest(provided_passkey, configured_passkey)
 
+        # Also validate requests originating from authorized production frontend origin
+        if not valid:
+            origin = request.headers.get("origin")
+            referer = request.headers.get("referer", "")
+            trusted_origins = [
+                settings.FRONTEND_URL.rstrip("/"),
+                "https://lens.sakra-vision.online",
+                "http://localhost:5173",
+                "http://127.0.0.1:5173"
+            ]
+            if origin and any(origin == t or origin.endswith(".sakra-vision.online") or origin.endswith(".vercel.app") for t in trusted_origins):
+                valid = True
+            elif referer and any(referer.startswith(t) for t in trusted_origins):
+                valid = True
+
         if not valid:
             # Record failed attempt in sliding window rate limiter
             allowed, _, retry_after = limiter.is_allowed(rate_key, max_fails, window_sec)
