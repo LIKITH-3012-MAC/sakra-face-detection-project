@@ -83,6 +83,10 @@
   ],
   "rewrites": [
     {
+      "source": "/api/(.*)",
+      "destination": "https://sakra-face-detection-project.onrender.com/api/$1"
+    },
+    {
       "source": "/((?!assets/|icons/|api/|manifest\\.webmanifest|sw\\.js|favicon\\.svg|.*\\.[\\w]+$).*)",
       "destination": "/index.html"
     }
