@@ -15,9 +15,10 @@ def get_system_health():
     # Camera configuration check (avoid hardware webcam polling)
     camera_available = settings.CAMERA_INDEX is not None
 
-    # Face recognition model status
-    from backend.services.recognition_service import recognition_service
+    # Face recognition & computer vision engine availability
+    from backend.services.recognition_service import recognition_service, FACE_RECOGNITION_AVAILABLE
     model_trained = recognition_service.is_loaded
+    opencv_available = hasattr(cv2, "imdecode")
 
     data = {
         "status": "healthy" if db_connected else "degraded",
@@ -29,6 +30,11 @@ def get_system_health():
         "camera": {
             "index": settings.CAMERA_INDEX,
             "accessible": camera_available
+        },
+        "engine": {
+            "face_recognition_available": FACE_RECOGNITION_AVAILABLE,
+            "opencv_available": opencv_available,
+            "database_available": db_connected
         },
         "model": {
             "trained": model_trained,

@@ -4,15 +4,18 @@ from typing import Any, Dict, List, Optional, Tuple
 import cv2
 import numpy as np
 
+logger = logging.getLogger("smart_attendance.recognition_service")
+
+FACE_RECOGNITION_AVAILABLE = False
 try:
     import face_recognition
-except ImportError:
+    FACE_RECOGNITION_AVAILABLE = True
+except Exception as e:
     face_recognition = None
+    logger.exception("Failed to import face_recognition biometric engine: %s", e)
 
 from backend.config import settings
 from backend.database.repository import repo
-
-logger = logging.getLogger("smart_attendance.recognition_service")
 
 class RecognitionService:
     """
@@ -203,6 +206,7 @@ class RecognitionService:
         """Diagnostic model and registered student status (Section 24)."""
         return {
             "engine": "face_recognition (128-D Encodings)",
+            "engine_available": FACE_RECOGNITION_AVAILABLE,
             "model_loaded": self.is_loaded,
             "registered_students_count": len(self.known_encodings),
             "registered_student_ids": self.known_student_ids,
