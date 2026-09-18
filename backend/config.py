@@ -64,7 +64,7 @@ class Settings(BaseSettings):
     ATTENDANCE_CUTOFF_TIME: str = "09:30:00"
 
     # CORS & Server
-    FRONTEND_URL: str = "http://localhost:5173"
+    FRONTEND_URL: str = "https://lens.sakra-vision.online"
     HOST: str = "0.0.0.0"
     PORT: int = 8000
 

@@ -1,7 +1,10 @@
 import axios from 'axios';
 
-// Configurable API base URL (defaults to same-origin reverse/dev proxy to avoid leaking credentials)
-export const API_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '';
+// Configurable API base URL (defaults to deployed Render backend in production, or dev proxy)
+export const API_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD ? 'https://sakra-face-detection-project.onrender.com' : '');
 
 const client = axios.create({
   baseURL: API_URL,

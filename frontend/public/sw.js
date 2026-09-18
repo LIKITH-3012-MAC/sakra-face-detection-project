@@ -53,24 +53,10 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. CRITICAL SECURITY RULE: NEVER cache API routes (/api/*)
-  // Ensures zero storage of tokens, biometric encodings, passwords, OTPs, or student records
-  if (url.pathname.startsWith('/api/')) {
-    event.respondWith(
-      fetch(request).catch(() => {
-        return new Response(
-          JSON.stringify({
-            success: false,
-            message: 'Network offline. Please reconnect to submit or verify attendance.',
-            data: null
-          }),
-          {
-            status: 503,
-            headers: { 'Content-Type': 'application/json' }
-          }
-        );
-      })
-    );
+  // 2. CRITICAL SECURITY RULE: NEVER cache API routes (/api/*) or Render backend calls
+  // Ensures zero storage of tokens, biometric encodings, passwords, OTPs, or student records.
+  // Bypasses Service Worker entirely to let the browser network stack handle it natively.
+  if (url.pathname.startsWith('/api/') || url.hostname.includes('onrender.com')) {
     return;
   }
 
