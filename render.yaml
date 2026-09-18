@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: sakra-lens-backend
+    name: sakra-face-detection-project
     runtime: python
     buildCommand: pip install --upgrade pip && pip install -r backend/requirements.txt
     startCommand: uvicorn backend.app:app --host 0.0.0.0 --port $PORT
