@@ -67,7 +67,7 @@ def test_resend_email_dispatch_success(mock_send):
     call_args = mock_send.call_args[0][0]
     assert call_args["to"] == ["likith@mail.likith-portfolio.online"]
     assert "Sakra-Lens Attendance Confirmation — Likith Naidu" in call_args["subject"]
-    assert "14.123456" in call_args["html"]
+    assert "Location Verified" in call_args["html"]
     assert "Today's Attendance: 1" in call_args["text"]
     assert "Total Attendance Records: 42" in call_args["text"]
 

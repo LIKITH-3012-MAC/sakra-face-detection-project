@@ -73,6 +73,28 @@ class Settings(BaseSettings):
     RESEND_FROM_EMAIL: str = "Sakra-Lens <noreply@yourdomain.com>"
     TIMEZONE: str = "Asia/Kolkata"
 
+    # Security & Production Settings
+    ENVIRONMENT: str = "development"
+    JWT_SECRET: str = "sakra_lens_production_super_jwt_secret_key_2026"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRATION_HOURS: int = 24
+    OTP_EXPIRATION_MINUTES: int = 3
+    MAX_OTP_ATTEMPTS: int = 5
+    MAX_REQUEST_SIZE_BYTES: int = 10 * 1024 * 1024  # 10MB
+    RATE_LIMIT_ENABLED: bool = True
+    COOKIE_SECURE: bool = False
+    INITIAL_ADMIN_PASSWORD: str = "Sakra"
+
+    # API-Wide Master Passkey Security Layer
+    API_MASTER_PASSKEY: str = "Mom"
+    API_PASSKEY_HEADER: str = "X-API-Passkey"
+    API_PASSKEY_FAIL_LIMIT: int = 10
+    API_PASSKEY_FAIL_WINDOW: int = 60
+
+    @property
+    def is_production(self) -> bool:
+        return self.ENVIRONMENT.lower() == "production"
+
     model_config = SettingsConfigDict(
         env_file=str(BASE_DIR / ".env"),
         env_file_encoding="utf-8",

@@ -84,7 +84,8 @@ class AttendanceService:
         student_name = student["name"] if student else student_id
         student_roll = student.get("roll_number", "") if student else ""
         student_dept = student.get("department", "") if student else ""
-        student_year = student.get("year") or student.get("academic_year", "") if student else ""
+        student_year = student.get("year", "") if student else ""
+        student_acad_year = student.get("academic_year", "") if student else ""
         student_section = student.get("section", "") if student else ""
         student_email = (student.get("email") or "").strip() if student else None
 
@@ -116,7 +117,8 @@ class AttendanceService:
             ip_address=ip_address,
             latitude=latitude,
             longitude=longitude,
-            location_accuracy=location_accuracy
+            location_accuracy=location_accuracy,
+            email_status="pending"
         )
 
         if ok and record:
@@ -158,33 +160,56 @@ class AttendanceService:
 
             # 6. Resend Email Notification Dispatch (DYNAMIC RECIPIENT FROM MySQL)
             # Only sent after database insertion succeeds. Email failure does NOT rollback attendance.
-            email_notification = "skipped"
+            email_notification = "pending"
+            email_status_db = "pending"
+            resend_id = None
 
             if student_email and "@" in student_email:
-                email_date = now.strftime("%d %B %Y")
-                email_time = now.strftime("%I:%M:%S %p IST")
+                try:
+                    email_date = now.strftime("%d %B %Y")
+                    email_time = now.strftime("%I:%M:%S %p")
+                    conf = round((1.0 - face_distance) * 100.0, 1)
 
-                email_ok, email_msg, resend_id = email_service.send_attendance_notification(
-                    student_name=student_name,
-                    student_id=display_id,
-                    roll_number=student_roll or display_id,
-                    department=student_dept,
-                    section=student_section,
-                    email=student_email,
-                    attendance_date=email_date,
-                    attendance_time=email_time,
-                    status=status,
-                    face_distance=face_distance,
-                    ip_address=ip_address,
-                    latitude=latitude,
-                    longitude=longitude,
-                    location_accuracy=location_accuracy,
-                    today_count=today_count,
-                    total_attendance_count=total_count,
-                    year=student_year
-                )
-                email_notification = "sent" if email_ok else "failed"
+                    email_ok, email_msg, resend_id = email_service.send_attendance_notification(
+                        student_name=student_name,
+                        student_id=canonical_student_id,
+                        roll_number=student_roll or canonical_student_id,
+                        department=student_dept,
+                        section=student_section,
+                        email=student_email,
+                        attendance_date=email_date,
+                        attendance_time=email_time,
+                        status=status,
+                        face_distance=face_distance,
+                        confidence_score=conf,
+                        ip_address=ip_address,
+                        latitude=latitude,
+                        longitude=longitude,
+                        location_accuracy=location_accuracy,
+                        today_count=today_count,
+                        total_attendance_count=total_count,
+                        year=student_year,
+                        academic_year=student_acad_year,
+                        tolerance_gate=0.50,
+                        device_info="Sakra-Lens Vision Client",
+                        last_attendance_time=last_attendance_time,
+                        timezone_str=f"{self.tz_name} (IST)"
+                    )
+                    email_status_db = "sent" if email_ok else "failed"
+                    email_notification = email_status_db
+                    if record.get("id"):
+                        repo.update_attendance_email_status(record["id"], email_status=email_status_db, email_message_id=resend_id)
+                except Exception as mail_err:
+                    logger.error(f"Failed to dispatch attendance notification email: {mail_err}")
+                    email_status_db = "failed"
+                    email_notification = "failed"
+                    if record.get("id"):
+                        repo.update_attendance_email_status(record["id"], email_status="failed", email_message_id=None)
             else:
+                email_notification = "not_configured"
+                email_status_db = "not_configured"
+                if record.get("id"):
+                    repo.update_attendance_email_status(record["id"], email_status="not_configured", email_message_id=None)
                 print(f"[RESEND] No registered email address found for student {display_id}. Notification skipped.\n")
 
             enhanced_record = {
@@ -192,14 +217,15 @@ class AttendanceService:
                 "student_id": canonical_student_id,
                 "name": student_name,
                 "roll_number": student_roll,
-                "department": student.get("department", "") if student else "",
-                "section": student.get("section", "") if student else "",
+                "department": student_dept,
+                "section": student_section,
                 "email": student_email,
                 "status": status,
                 "date": date_str,
                 "time": time_str,
                 "timezone": self.tz_name,
                 "face_distance": face_distance,
+                "confidence_score": round((1.0 - face_distance) * 100.0, 1),
                 "ip_address": ip_address,
                 "latitude": latitude,
                 "longitude": longitude,
@@ -207,7 +233,9 @@ class AttendanceService:
                 "today_count": today_count,
                 "total_attendance_count": total_count,
                 "last_attendance_time": last_attendance_time,
-                "email_notification": email_notification
+                "email_notification": email_notification,
+                "email_status": email_status_db,
+                "email_message_id": resend_id
             }
 
             return True, f"{student_name} marked {status}", enhanced_record

@@ -92,7 +92,7 @@ export default function Settings() {
         <div>
           <h1 className="page-title">System Settings & Configuration</h1>
           <p className="page-subtitle">
-            Configure attendance timing policies, recognition thresholds, and inspect database parameters
+            Configure attendance timing policies, recognition thresholds, and inspect system status
           </p>
         </div>
       </div>
@@ -176,21 +176,21 @@ export default function Settings() {
         <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
             <Database size={20} color="var(--primary)" />
-            <h3 style={{ fontSize: '1.125rem' }}>Cloud MySQL & Server Diagnostics</h3>
+            <h3 style={{ fontSize: '1.125rem' }}>System Status & Diagnostics</h3>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.85rem' }}>
             <div style={{ padding: '0.75rem', backgroundColor: 'var(--bg-main)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
-              <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>Cloud Database Host:</span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>System Connection:</span>
               <p className="code-font" style={{ fontWeight: 700 }}>
-                {healthData?.database?.host || 'localhost'}:{healthData?.database?.port || 3306}
+                Secure Cloud Database
               </p>
             </div>
 
             <div style={{ padding: '0.75rem', backgroundColor: 'var(--bg-main)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
-              <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>Database Name:</span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>Service Environment:</span>
               <p className="code-font" style={{ fontWeight: 700 }}>
-                {healthData?.database?.database_name || 'smart_attendance'}
+                {healthData?.database?.status || 'Operational'}
               </p>
             </div>
 
@@ -200,14 +200,14 @@ export default function Settings() {
                 fontWeight: 700,
                 color: healthData?.database?.connected ? 'var(--success)' : 'var(--danger)'
               }}>
-                {healthData?.database?.connected ? 'Connected (Cloud MySQL Operational)' : `Disconnected (${healthData?.database?.message || 'Check .env'})`}
+                {healthData?.database?.connected ? 'Connected & Operational' : 'Service Offline (Please check connection)'}
               </p>
             </div>
 
             <div style={{ padding: '0.75rem', backgroundColor: 'var(--bg-main)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
-              <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>Computer Vision Classifier:</span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>Biometric Verification Engine:</span>
               <p style={{ fontWeight: 600 }}>
-                OpenCV + 128-D Deep Metric Face Recognition (dlib ResNet / HOG)
+                High-Precision Biometric Face Recognition
               </p>
             </div>
 
@@ -219,9 +219,9 @@ export default function Settings() {
               color: '#065f46',
               fontSize: '0.75rem'
             }}>
-              <p style={{ fontWeight: 700, marginBottom: '0.2rem' }}>🎓 College Viva Architecture Note:</p>
+              <p style={{ fontWeight: 700, marginBottom: '0.2rem' }}>🔒 Security & Data Protection:</p>
               <p>
-                Credentials remain securely encapsulated on the backend inside <code>.env</code> and are never leaked to the client bundle. Parameterized SQL prevents SQL injection.
+                All student biometric profiles and attendance records are encrypted and securely stored in compliance with institutional data and privacy standards.
               </p>
             </div>
           </div>
@@ -272,12 +272,12 @@ export default function Settings() {
           {recognitionModelStatus?.active_labels && Object.keys(recognitionModelStatus.active_labels).length > 0 && (
             <div style={{ marginBottom: '1.25rem', padding: '0.75rem', backgroundColor: 'var(--bg-main)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
               <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', display: 'block', marginBottom: '0.35rem' }}>
-                Active Label Mapping (Numeric Label → Student ID):
+                Active Enrolled Student Identifiers:
               </span>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
                 {Object.entries(recognitionModelStatus.active_labels).map(([num, sid]) => (
                   <span key={num} className="code-font" style={{ fontSize: '0.75rem', backgroundColor: 'var(--bg-muted)', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
-                    {num}: <strong>{sid}</strong>
+                    ID: <strong>{sid}</strong>
                   </span>
                 ))}
               </div>

@@ -34,12 +34,19 @@
   padding: 0;
 }
 
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
+}
+
 body {
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: var(--bg-main);
   color: var(--text-main);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* App Layout */
@@ -350,12 +357,191 @@ h1, h2, h3, h4, h5 {
   gap: 0.5rem;
 }
 
-/* Responsive */
-@media (max-width: 900px) {
-  .app-container {
-    flex-direction: column;
+/* ============================================================ */
+/* Responsive & Mobile-First Navigation Rules                  */
+/* ============================================================ */
+.desktop-navbar {
+  display: flex !important;
+}
+
+.mobile-top-nav {
+  display: none !important;
+}
+
+.desktop-sidebar {
+  display: flex !important;
+}
+
+/* Dual View: Desktop Table vs Mobile Cards */
+.desktop-table-view {
+  display: block;
+}
+
+.mobile-card-list {
+  display: none;
+}
+
+/* Mobile Card Item */
+.mobile-card-item {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  transition: var(--transition);
+}
+
+.mobile-card-item:active {
+  background-color: var(--bg-muted);
+}
+
+/* Mobile and Tablet Breakpoint (< 900px) */
+@media (max-width: 899px) {
+  .desktop-navbar {
+    display: none !important;
   }
+
+  .desktop-sidebar {
+    display: none !important;
+  }
+
+  .mobile-top-nav {
+    display: block !important;
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background-color: var(--bg-surface);
+  }
+
+  .app-container {
+    display: block !important;
+    min-height: 100vh;
+  }
+
+  .main-content {
+    width: 100%;
+    min-width: 0;
+  }
+
   .page-body {
-    padding: 1.25rem;
+    padding: 0.85rem 0.85rem 2.5rem 0.85rem !important;
+    max-width: 100% !important;
+  }
+
+  .page-header {
+    margin-bottom: 1.25rem;
+    gap: 0.75rem;
+  }
+
+  .page-title {
+    font-size: 1.35rem;
   }
 }
+
+/* Compact Mobile Breakpoint (< 768px) */
+@media (max-width: 768px) {
+  .desktop-table-view {
+    display: none !important;
+  }
+
+  .mobile-card-list {
+    display: flex !important;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
+    gap: 0.75rem !important;
+  }
+
+  .btn {
+    min-height: 42px; /* Touch target minimum */
+  }
+
+  .filter-bar {
+    padding: 0.75rem !important;
+    gap: 0.5rem !important;
+  }
+}
+
+/* ========================================================================== */
+/* PWA NATIVE APP ENHANCEMENTS                                               */
+/* ========================================================================== */
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Mobile PWA Layout Rules (< 900px) */
+@media (max-width: 899px) {
+  .mobile-bottom-nav {
+    display: block !important;
+  }
+
+  /* Extra bottom padding on page-body so content never clips behind bottom nav bar */
+  .page-body {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 84px) !important;
+  }
+
+  /* Prevent awkward elastic bounce pull-down in standalone app mode */
+  body {
+    overscroll-behavior-y: none;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Responsive Touch & Active Press Feedback */
+button:active,
+.btn:active {
+  transform: scale(0.98);
+}
+
+/* Standalone Installed PWA Display Mode Tweaks */
+@media all and (display-mode: standalone) {
+  body {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* Re-enable selection for readable text content */
+  p, h1, h2, h3, h4, h5, span, td, th {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+}
+
+/* Accessibility: Respect Reduced Motion Preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+

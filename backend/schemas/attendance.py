@@ -9,15 +9,15 @@ class AttendanceStatus(str, Enum):
     ABSENT = "Absent"
 
 class AttendanceMarkRequest(BaseModel):
-    student_id: str = Field(..., description="Student ID to mark attendance for")
+    student_id: str = Field(..., min_length=1, max_length=50, description="Student ID to mark attendance for")
     status: Optional[AttendanceStatus] = Field(None, description="Present or Late (if omitted, evaluated via cutoff time)")
     attendance_date: Optional[date] = Field(None, description="Date (defaults to today)")
     attendance_time: Optional[Union[time, str]] = Field(None, description="Time (defaults to current time)")
-    confidence_score: Optional[float] = Field(None, description="Face recognition confidence score")
-    face_distance: Optional[float] = Field(None, description="Face recognition Euclidean distance")
-    latitude: Optional[float] = Field(None, description="Client GPS latitude")
-    longitude: Optional[float] = Field(None, description="Client GPS longitude")
-    location_accuracy: Optional[float] = Field(None, description="Client GPS accuracy in meters")
+    confidence_score: Optional[float] = Field(None, ge=0.0, le=100.0, description="Face recognition confidence score")
+    face_distance: Optional[float] = Field(None, ge=0.0, le=2.0, description="Face recognition Euclidean distance")
+    latitude: Optional[float] = Field(None, ge=-90.0, le=90.0, description="Client GPS latitude")
+    longitude: Optional[float] = Field(None, ge=-180.0, le=180.0, description="Client GPS longitude")
+    location_accuracy: Optional[float] = Field(None, ge=0.0, le=10000.0, description="Client GPS accuracy in meters")
 
 class AttendanceRecordResponse(BaseModel):
     id: int
@@ -40,6 +40,8 @@ class AttendanceRecordResponse(BaseModel):
     last_attendance_time: Optional[str] = None
     timezone: Optional[str] = None
     email_notification: Optional[str] = None
+    email_status: Optional[str] = None
+    email_message_id: Optional[str] = None
     created_at: Optional[datetime] = None
 
     @field_validator("attendance_time", mode="before")

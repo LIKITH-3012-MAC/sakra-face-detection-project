@@ -4,19 +4,20 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 import cv2
 import numpy as np
-from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, Field
 
 from backend.config import settings
 from backend.services.recognition_service import recognition_service
 from backend.database.repository import repo
 from backend.schemas.common import ApiResponse
+from backend.security import require_admin, face_cv_limiter
 
 logger = logging.getLogger("smart_attendance.recognition_router")
 router = APIRouter(tags=["Recognition & Training Diagnostics"])
 
 class RecognitionTestRequest(BaseModel):
-    image_base64: str
+    image_base64: str = Field(..., max_length=12 * 1024 * 1024)
 
 @router.get("/api/recognition/status", response_model=ApiResponse[dict])
 def get_recognition_status():
@@ -30,7 +31,7 @@ def get_recognition_status():
         message="Recognition engine status retrieved",
         data={
             "model_loaded": raw_status["model_loaded"],
-            "model_version": "128-D ResNet",
+            "model_version": "v2.1",
             "trained_students": raw_status["registered_students_count"],
             "trained_images": raw_status["registered_students_count"],
             "labels_loaded": raw_status["model_loaded"],
@@ -52,14 +53,14 @@ def get_training_status():
         message="Training pipeline status retrieved",
         data={
             "status": "ready" if count > 0 else "not_trained",
-            "model_version": "128-D Encodings",
+            "model_version": "v2.1",
             "students": count,
             "images": count,
             "last_trained_at": datetime.now().isoformat()
         }
     )
 
-@router.post("/api/recognition/test", response_model=ApiResponse[dict])
+@router.post("/api/recognition/test", response_model=ApiResponse[dict], dependencies=[Depends(face_cv_limiter)])
 def test_recognition_endpoint(payload: RecognitionTestRequest):
     """
     Standalone recognition verification endpoint:
@@ -75,6 +76,14 @@ def test_recognition_endpoint(payload: RecognitionTestRequest):
         frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         if frame is None:
             raise ValueError("Could not decode image")
+        h, w = frame.shape[:2]
+        if h > 4096 or w > 4096:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Image resolution exceeds maximum allowed limit (4096x4096)."
+            )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -115,13 +124,13 @@ def test_recognition_endpoint(payload: RecognitionTestRequest):
     )
 
 @router.post("/api/training/retrain", response_model=ApiResponse[dict])
-def trigger_retraining():
+def trigger_retraining(admin: dict = Depends(require_admin)):
     """
     Trigger reload of all registered student encodings from Cloud MySQL.
     """
     count = recognition_service.load_registered_students()
     return ApiResponse(
         success=True,
-        message=f"Loaded {count} student face encodings from Cloud MySQL.",
+        message=f"Biometric models refreshed. {count} active student profiles loaded.",
         data=recognition_service.get_status()
     )

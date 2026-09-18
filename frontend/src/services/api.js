@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Configurable API base URL from Vite environment variable
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Configurable API base URL (defaults to same-origin reverse/dev proxy to avoid leaking credentials)
+export const API_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '';
 
 const client = axios.create({
   baseURL: API_URL,
@@ -9,6 +9,15 @@ const client = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+});
+
+// Request interceptor to attach JWT authorization bearer token
+client.interceptors.request.use((config) => {
+  const token = localStorage.getItem('sakra_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
 // Response interceptor to unwrap data and normalize errors
@@ -23,6 +32,26 @@ client.interceptors.response.use(
     return Promise.reject(new Error(errorMsg));
   }
 );
+
+// ----------------------------------------------------
+// Authentication & RBAC APIs
+// ----------------------------------------------------
+export const requestRegistrationOtp = (data) => client.post('/api/auth/register-request-otp', data);
+export const verifyOtp = (data) => client.post('/api/auth/verify-otp', data);
+export const registerStudent = (data) => client.post('/api/auth/register-student', data);
+export const login = (data) => client.post('/api/auth/login', data);
+export const adminLogin = (data) => client.post('/api/auth/admin/login', data);
+export const getCurrentUser = () => client.get('/api/auth/me');
+export const getStudentProfile = () => client.get('/api/auth/student/profile');
+
+// ----------------------------------------------------
+// Admin Management APIs
+// ----------------------------------------------------
+export const getAdminOverview = () => client.get('/api/admin/overview');
+export const getAuditLogs = () => client.get('/api/admin/audit-logs');
+export const getAdminUsers = () => client.get('/api/admin/users');
+export const getAdmins = () => client.get('/api/admin/admins');
+export const inviteAdmin = (data) => client.post('/api/admin/invite', data);
 
 // ----------------------------------------------------
 // Health & System APIs
@@ -94,6 +123,18 @@ export const getExportCsvUrl = (reportType = 'attendance', extraParams = {}) => 
 };
 
 export default {
+  requestRegistrationOtp,
+  verifyOtp,
+  registerStudent,
+  login,
+  adminLogin,
+  getCurrentUser,
+  getStudentProfile,
+  getAdminOverview,
+  getAuditLogs,
+  getAdminUsers,
+  getAdmins,
+  inviteAdmin,
   getHealth,
   getSettings,
   updateSettings,

@@ -2,17 +2,21 @@ import csv
 import io
 from datetime import date, datetime
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 import pandas as pd
 from mysql.connector import Error as MySQLError
 
 from backend.database.connection import execute_query
 from backend.schemas.common import ApiResponse
+from backend.security import require_admin
 
 router = APIRouter(prefix="/api/reports", tags=["Reports"])
 
 @router.get("/daily", response_model=ApiResponse[dict])
-def get_daily_report(report_date: Optional[date] = Query(None, description="Date for report (YYYY-MM-DD)")):
+def get_daily_report(
+    report_date: Optional[date] = Query(None, description="Date for report (YYYY-MM-DD)"),
+    admin: dict = Depends(require_admin)
+):
     """Generate daily attendance report for a specific date."""
     target_date = report_date or date.today()
     query = """
@@ -55,7 +59,8 @@ def get_daily_report(report_date: Optional[date] = Query(None, description="Date
 def get_monthly_report(
     year: int = Query(..., ge=2020, le=2035, description="Year e.g. 2026"),
     month: int = Query(..., ge=1, le=12, description="Month 1-12"),
-    department: Optional[str] = Query(None, description="Filter by department")
+    department: Optional[str] = Query(None, description="Filter by department"),
+    admin: dict = Depends(require_admin)
 ):
     """Generate monthly aggregated attendance report."""
     query = """
@@ -90,7 +95,8 @@ def get_monthly_report(
 @router.get("/student-wise", response_model=ApiResponse[List[dict]])
 def get_student_wise_report(
     department: Optional[str] = Query(None),
-    section: Optional[str] = Query(None)
+    section: Optional[str] = Query(None),
+    admin: dict = Depends(require_admin)
 ):
     """Generate comprehensive student-wise attendance percentage report."""
     # Total distinct class days conducted
@@ -151,7 +157,8 @@ def export_attendance_csv(
     report_type: str = Query("attendance", description="'attendance', 'daily', or 'student-wise'"),
     report_date: Optional[date] = Query(None),
     department: Optional[str] = Query(None),
-    section: Optional[str] = Query(None)
+    section: Optional[str] = Query(None),
+    admin: dict = Depends(require_admin)
 ):
     """Export attendance data directly as a downloadable CSV file."""
     output = io.StringIO()
@@ -159,7 +166,7 @@ def export_attendance_csv(
 
     if report_type == "student-wise":
         # Export student-wise percentage
-        report_res = get_student_wise_report(department=department, section=section)
+        report_res = get_student_wise_report(department=department, section=section, admin=admin)
         students_data = report_res.data or []
 
         writer.writerow(["Student ID", "Name", "Roll Number", "Department", "Year", "Section", "Total Classes", "Present", "Late", "Absent", "Attendance %"])

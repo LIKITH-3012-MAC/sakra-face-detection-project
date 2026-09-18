@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: sakra-lens-backend
+    runtime: python
+    buildCommand: pip install --upgrade pip && pip install -r backend/requirements.txt
+    startCommand: uvicorn backend.app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: FRONTEND_URL
+        sync: false
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "13350"
+      - key: DB_NAME
+        value: smart_attendance
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_SSL_DISABLED
+        value: "false"
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        value: Likith Naidu <noreply@mail.likith-portfolio.online>
+      - key: API_MASTER_PASSKEY
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: TIMEZONE
+        value: Asia/Kolkata

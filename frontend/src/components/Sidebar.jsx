@@ -8,22 +8,38 @@ import {
   CalendarCheck,
   FileBarChart,
   Settings,
-  Sparkles
+  Sparkles,
+  ShieldAlert,
+  User,
+  LogOut
 } from 'lucide-react';
-
-const NAV_ITEMS = [
-  { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/students', label: 'Students', icon: Users },
-  { path: '/register-student', label: 'Register Student', icon: UserPlus },
-  { path: '/live-attendance', label: 'Live Attendance', icon: Camera, highlight: true },
-  { path: '/attendance', label: 'Attendance', icon: CalendarCheck },
-  { path: '/reports', label: 'Reports', icon: FileBarChart },
-  { path: '/settings', label: 'Settings', icon: Settings },
-];
+import { useAuth } from '../context/AuthContext';
 
 export default function Sidebar() {
+  const { role, isAdmin, isStudent, logout } = useAuth();
+
+  const adminNavItems = [
+    { path: '/admin', label: 'Admin Dashboard', icon: LayoutDashboard },
+    { path: '/admin/students', label: 'Students Directory', icon: Users },
+    { path: '/admin/register-student', label: 'Enroll Student', icon: UserPlus },
+    { path: '/admin/live-attendance', label: 'Live Attendance', icon: Camera, highlight: true },
+    { path: '/admin/attendance', label: 'Attendance Logs', icon: CalendarCheck },
+    { path: '/admin/reports', label: 'Reports & Analytics', icon: FileBarChart },
+    { path: '/admin/admins', label: 'Admin Management', icon: ShieldAlert },
+    { path: '/admin/settings', label: 'System Settings', icon: Settings },
+  ];
+
+  const studentNavItems = [
+    { path: '/student/dashboard', label: 'My Dashboard', icon: LayoutDashboard },
+    { path: '/student/live-attendance', label: 'Live Attendance', icon: Camera, highlight: true },
+    { path: '/student/attendance', label: 'My Attendance Logs', icon: CalendarCheck },
+    { path: '/student/profile', label: 'My Profile & Biometrics', icon: User },
+  ];
+
+  const navItems = isAdmin ? adminNavItems : studentNavItems;
+
   return (
-    <aside style={{
+    <aside className="desktop-sidebar" style={{
       width: 'var(--sidebar-width)',
       backgroundColor: 'var(--bg-surface)',
       borderRight: '1px solid var(--border-color)',
@@ -38,26 +54,26 @@ export default function Sidebar() {
           gap: '0.5rem',
           padding: '0.5rem 0.75rem',
           borderRadius: 'var(--radius-sm)',
-          backgroundColor: 'var(--primary-light)',
-          color: 'var(--primary-dark)',
+          backgroundColor: isAdmin ? '#fef3c7' : 'var(--primary-light)',
+          color: isAdmin ? '#92400e' : 'var(--primary-dark)',
           fontSize: '0.75rem',
           fontWeight: 700,
           letterSpacing: '0.05em',
           textTransform: 'uppercase'
         }}>
-          <Sparkles size={14} />
-          <span>Computer Vision Portal</span>
+          {isAdmin ? <ShieldAlert size={14} /> : <Sparkles size={14} />}
+          <span>{isAdmin ? 'Administrator Portal' : 'Student Vision Portal'}</span>
         </div>
       </div>
 
       <nav style={{ padding: '1rem 0.75rem', flex: 1, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const Icon = item.icon;
           return (
             <NavLink
               key={item.path}
               to={item.path}
-              end={item.path === '/'}
+              end={item.path === '/admin' || item.path === '/student/dashboard'}
               style={({ isActive }) => ({
                 display: 'flex',
                 alignItems: 'center',
@@ -93,17 +109,39 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Academic Viva Footer */}
+      {/* Logout / Academic Viva Footer */}
       <div style={{
         padding: '1.25rem',
         borderTop: '1px solid var(--border-color)',
         fontSize: '0.75rem',
         color: 'var(--text-secondary)'
       }}>
+        <button
+          onClick={logout}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.5rem 0.75rem',
+            borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--border-color)',
+            backgroundColor: 'var(--bg-muted)',
+            color: 'var(--text-secondary)',
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            marginBottom: '1rem'
+          }}
+        >
+          <LogOut size={15} />
+          <span>Sign Out</span>
+        </button>
+
         <p style={{ fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.25rem' }}>
-          College Viva Ready
+          Sakra-Lens System
         </p>
-        <p>OpenCV + FastAPI + Cloud MySQL Architecture</p>
+        <p style={{ margin: 0 }}>Smart Attendance Platform</p>
       </div>
     </aside>
   );

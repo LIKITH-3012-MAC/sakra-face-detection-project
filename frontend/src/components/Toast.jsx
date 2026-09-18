@@ -1,8 +1,10 @@
 import React from 'react';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 
-export default function Toast({ toast, onClose }) {
-  if (!toast) return null;
+export default function Toast(props) {
+  const toastData = props.toast || (props.message ? { message: props.message, type: props.type } : null);
+  if (!toastData) return null;
+  const onClose = props.onClose;
 
   const types = {
     success: {
@@ -25,7 +27,7 @@ export default function Toast({ toast, onClose }) {
     }
   };
 
-  const current = types[toast.type] || types.info;
+  const current = types[toastData.type] || types.info;
   const Icon = current.icon;
 
   return (
@@ -49,7 +51,7 @@ export default function Toast({ toast, onClose }) {
     }}>
       <Icon size={20} style={{ flexShrink: 0 }} />
       <p style={{ fontSize: '0.875rem', fontWeight: 600, flex: 1, margin: 0 }}>
-        {toast.message}
+        {toastData.message}
       </p>
       {onClose && (
         <button

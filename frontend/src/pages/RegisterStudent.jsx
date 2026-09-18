@@ -75,7 +75,7 @@ export default function RegisterStudent() {
   // Form Input Validation
   const validateForm = () => {
     const errors = {};
-    if (!formData.student_id.trim()) errors.student_id = 'Student ID is required (e.g. STD-101)';
+    if (!formData.student_id.trim()) errors.student_id = 'Student ID is required';
     if (!formData.name.trim()) errors.name = 'Full name is required';
     if (!formData.roll_number.trim()) errors.roll_number = 'Roll number is required';
     if (!formData.department.trim()) errors.department = 'Department is required';
@@ -230,7 +230,7 @@ export default function RegisterStudent() {
     }
   };
 
-  // Single Face Photo Enrollment (1 Photo -> 1 128-D Vector -> Cloud MySQL)
+  // Single Face Photo Enrollment (1 Photo -> Biometric Verification Profile)
   const handleCaptureOnePhoto = async () => {
     if (!cameraActive) {
       showToast('Camera is not active. Connect camera first.', 'error');
@@ -244,7 +244,7 @@ export default function RegisterStudent() {
     }
 
     setIsCapturing(true);
-    setLiveQualityFeedback({ valid: true, text: 'Extracting 128-D facial encoding and saving to Cloud MySQL...' });
+    setLiveQualityFeedback({ valid: true, text: 'Enrolling face biometrics...' });
 
     try {
       const studentId = registeredStudent?.student_id;
@@ -252,7 +252,7 @@ export default function RegisterStudent() {
       if (res.success) {
         setCapturedCount(1);
         setTrainedModelVersion(1);
-        showToast('Face captured & 128-D encoding saved to Cloud MySQL!', 'success');
+        showToast('Face captured & biometric profile enrolled successfully!', 'success');
         stopCamera();
         setStep(3);
       } else {
@@ -278,9 +278,9 @@ export default function RegisterStudent() {
       {/* Header */}
       <div className="page-header">
         <div>
-          <h1 className="page-title">Student Registration & 128-D Face Enrollment</h1>
+          <h1 className="page-title">Student Registration & Face Enrollment</h1>
           <p className="page-subtitle">
-            One-shot reference face capture, 128-dimensional biometric encoding, and Cloud MySQL persistence
+            One-shot reference face capture and biometric profile enrollment
           </p>
         </div>
       </div>
@@ -348,7 +348,7 @@ export default function RegisterStudent() {
           }}>
             3
           </div>
-          <span style={{ fontWeight: step === 3 ? 700 : 500, fontSize: '0.875rem' }}>3. 128-D Enrolled</span>
+          <span style={{ fontWeight: step === 3 ? 700 : 500, fontSize: '0.875rem' }}>3. Face Enrolled</span>
         </div>
       </div>
 
@@ -363,12 +363,12 @@ export default function RegisterStudent() {
           <form onSubmit={handleRegisterSubmit}>
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Student ID * (e.g. STD-101)</label>
+                <label className="form-label">Student ID *</label>
                 <input
                   type="text"
                   name="student_id"
                   className="form-control"
-                  placeholder="STD-101"
+                  placeholder="Enter student ID"
                   value={formData.student_id}
                   onChange={handleInputChange}
                 />
@@ -385,7 +385,7 @@ export default function RegisterStudent() {
                   type="text"
                   name="roll_number"
                   className="form-control"
-                  placeholder="2473A31139"
+                  placeholder="Enter roll number"
                   value={formData.roll_number}
                   onChange={handleInputChange}
                 />
@@ -403,7 +403,7 @@ export default function RegisterStudent() {
                 type="text"
                 name="name"
                 className="form-control"
-                placeholder="Likith Naidu"
+                placeholder="Enter full name"
                 value={formData.name}
                 onChange={handleInputChange}
               />
@@ -468,7 +468,7 @@ export default function RegisterStudent() {
                 type="email"
                 name="email"
                 className="form-control"
-                placeholder="student@college.edu"
+                placeholder="Enter email address"
                 value={formData.email}
                 onChange={handleInputChange}
               />
@@ -639,13 +639,13 @@ export default function RegisterStudent() {
               }}
             >
               <Camera size={20} />
-              {isCapturing ? 'Generating 128-D Biometrics...' : '📸 Capture & Enroll Face (1 Photo)'}
+              {isCapturing ? 'Enrolling Face Profile...' : '📸 Capture & Enroll Face'}
             </button>
           </div>
         </div>
       )}
 
-      {/* STEP 3: 128-D Biometric Model Enrolled */}
+      {/* STEP 3: Biometric Profile Enrolled */}
       {step === 3 && (
         <div className="card" style={{ maxWidth: '640px', margin: '0 auto', textAlign: 'center', padding: '3rem 2rem' }}>
           <div style={{
@@ -666,7 +666,7 @@ export default function RegisterStudent() {
             Biometric Profile Enrolled!
           </h2>
           <p style={{ color: 'var(--text-secondary)', marginBottom: '1.75rem', fontSize: '0.925rem' }}>
-            Reference face photo and 128-D biometric encoding vector for <strong>{registeredStudent?.name}</strong> have been persisted directly into Cloud MySQL.
+            Reference face photo and biometric verification profile for <strong>{registeredStudent?.name}</strong> have been saved successfully.
           </p>
 
           <div style={{
@@ -692,16 +692,16 @@ export default function RegisterStudent() {
                 <p style={{ fontWeight: 600 }}>{registeredStudent?.department} ({registeredStudent?.section})</p>
               </div>
               <div>
-                <span style={{ color: 'var(--text-secondary)' }}>Biometric Vector:</span>
-                <p style={{ fontWeight: 700, color: 'var(--success)' }}>128-D Encodings (Cloud MySQL)</p>
+                <span style={{ color: 'var(--text-secondary)' }}>Biometric Profile:</span>
+                <p style={{ fontWeight: 700, color: 'var(--success)' }}>Enrolled & Active</p>
               </div>
               <div>
-                <span style={{ color: 'var(--text-secondary)' }}>Tolerance Gate:</span>
-                <p style={{ fontWeight: 700, color: 'var(--primary)' }}>&le; 0.50 (Euclidean Distance)</p>
+                <span style={{ color: 'var(--text-secondary)' }}>Verification Status:</span>
+                <p style={{ fontWeight: 700, color: 'var(--primary)' }}>Ready</p>
               </div>
               <div>
                 <span style={{ color: 'var(--text-secondary)' }}>Status:</span>
-                <p style={{ fontWeight: 700, color: 'var(--success)' }}>Active & Trained ✓</p>
+                <p style={{ fontWeight: 700, color: 'var(--success)' }}>Active & Verified ✓</p>
               </div>
             </div>
           </div>
@@ -729,7 +729,7 @@ export default function RegisterStudent() {
               Enroll Next Student
             </button>
             <button
-              onClick={() => navigate('/live-attendance')}
+              onClick={() => navigate('/admin/live-attendance')}
               className="btn btn-primary"
             >
               Test Live Attendance →

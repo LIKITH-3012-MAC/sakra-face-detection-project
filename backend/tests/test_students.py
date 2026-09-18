@@ -15,8 +15,10 @@ def test_api_health_endpoint():
     assert "status" in data["data"]
     assert "database" in data["data"]
 
+from backend.services.auth_service import auth_service
+
 def test_student_validation_empty_id():
-    """Verify Pydantic validation rejects empty student_id."""
+    """Verify Pydantic validation rejects empty student_id when called by admin."""
     invalid_payload = {
         "student_id": "",
         "name": "Test Student",
@@ -25,7 +27,8 @@ def test_student_validation_empty_id():
         "year": "4th Year",
         "section": "A"
     }
-    res = client.post("/api/students", json=invalid_payload)
+    admin_token = auth_service.create_token({"email": "admin@sakra-lens", "role": "admin"})
+    res = client.post("/api/students", json=invalid_payload, headers={"Authorization": f"Bearer {admin_token}"})
     assert res.status_code == 422
     data = res.json()
     assert data["success"] is False

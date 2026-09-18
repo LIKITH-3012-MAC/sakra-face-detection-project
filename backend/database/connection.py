@@ -98,7 +98,85 @@ def _init_local_db_if_needed():
     except Exception:
         pass
     try:
+        cursor.execute("ALTER TABLE attendance ADD COLUMN email_status TEXT DEFAULT 'pending';")
+    except Exception:
+        pass
+    try:
+        cursor.execute("ALTER TABLE attendance ADD COLUMN email_message_id TEXT;")
+    except Exception:
+        pass
+    try:
         cursor.execute("ALTER TABLE students ADD COLUMN academic_year TEXT;")
+    except Exception:
+        pass
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            full_name TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'user',
+            student_id TEXT,
+            roll_number TEXT,
+            is_verified BOOLEAN DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS otp_verifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL,
+            otp_hash TEXT NOT NULL,
+            purpose TEXT NOT NULL DEFAULT 'registration',
+            attempts INTEGER DEFAULT 0,
+            is_used BOOLEAN DEFAULT 0,
+            expires_at TIMESTAMP NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS email_verifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL,
+            otp_code_hash TEXT NOT NULL,
+            otp_salt TEXT NOT NULL,
+            expires_at TIMESTAMP NOT NULL,
+            attempts INTEGER DEFAULT 0,
+            is_used BOOLEAN DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS admin_invitations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL,
+            invited_by TEXT NOT NULL,
+            status TEXT DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS audit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_email TEXT,
+            action TEXT NOT NULL,
+            details TEXT,
+            ip_address TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    try:
+        cursor.execute("ALTER TABLE audit_logs ADD COLUMN user_email TEXT;")
+    except Exception:
+        pass
+    try:
+        from backend.services.auth_service import auth_service
+        admin_hash = auth_service.hash_password("Sakra")
+        cursor.execute("""
+            INSERT OR IGNORE INTO users (email, password_hash, full_name, role, is_verified)
+            VALUES ('admin@sakra-lens', ?, 'System Administrator', 'admin', 1);
+        """, (admin_hash,))
     except Exception:
         pass
     cursor.execute("INSERT OR IGNORE INTO system_settings (id, cutoff_time, recognition_threshold, min_dataset_images, auto_mark_enabled) VALUES (1, '09:30:00', 65.0, 25, 1);")
@@ -134,6 +212,23 @@ def init_connection_pool() -> bool:
             **cfg
         )
         logger.info("Cloud MySQL connection pool initialized successfully.")
+        try:
+            mig_conn = _pool.get_connection()
+            mig_cur = mig_conn.cursor()
+            try:
+                mig_cur.execute("ALTER TABLE attendance ADD COLUMN email_status VARCHAR(50) DEFAULT 'pending'")
+                mig_conn.commit()
+            except Exception:
+                pass
+            try:
+                mig_cur.execute("ALTER TABLE attendance ADD COLUMN email_message_id VARCHAR(100) NULL")
+                mig_conn.commit()
+            except Exception:
+                pass
+            mig_cur.close()
+            mig_conn.close()
+        except Exception as mig_err:
+            logger.debug(f"MySQL schema auto-migration note: {mig_err}")
         return True
     except MySQLError as e:
         logger.warning(f"Could not connect to Cloud MySQL pool ({e.msg}). Local operational fallback ready.")
@@ -172,7 +267,7 @@ def get_db_connection():
 @contextmanager
 def get_db_cursor(commit: bool = False, dictionary: bool = True):
     with get_db_connection() as conn:
-        cursor = conn.cursor(dictionary=dictionary)
+        cursor = conn.cursor(dictionary=dictionary, buffered=True)
         try:
             yield cursor
             if commit:
@@ -229,7 +324,7 @@ def execute_query(
         else:
             conn = mysql.connector.connect(**get_connection_config())
 
-        cursor = conn.cursor(dictionary=dictionary)
+        cursor = conn.cursor(dictionary=dictionary, buffered=True)
         try:
             cursor.execute(query, params or ())
             result = None
@@ -252,6 +347,9 @@ def execute_query(
         _init_local_db_if_needed()
         # Convert %s placeholders to ? for SQLite
         sqlite_query = query.replace("%s", "?")
+        sqlite_query = sqlite_query.replace("INSERT IGNORE INTO", "INSERT OR IGNORE INTO")
+        sqlite_query = sqlite_query.replace("CURDATE()", "DATE('now')")
+        sqlite_query = sqlite_query.replace("NOW()", "DATETIME('now')")
         # Handle MySQL specific syntax like ON DUPLICATE KEY UPDATE or ENUM
         if "ON DUPLICATE KEY UPDATE" in sqlite_query:
             if "system_settings" in sqlite_query:

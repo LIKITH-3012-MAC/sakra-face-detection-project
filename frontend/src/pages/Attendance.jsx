@@ -144,11 +144,11 @@ export default function Attendance() {
           <button type="submit" className="btn btn-secondary">Search</button>
         </form>
 
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', width: '100%' }}>
           <input
             type="date"
             className="form-control"
-            style={{ width: '160px' }}
+            style={{ flex: '1 1 140px', minWidth: '130px' }}
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
             title="Filter by Specific Date"
@@ -156,7 +156,7 @@ export default function Attendance() {
 
           <select
             className="form-select"
-            style={{ width: '140px' }}
+            style={{ flex: '1 1 130px', minWidth: '120px' }}
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
@@ -168,7 +168,7 @@ export default function Attendance() {
 
           <select
             className="form-select"
-            style={{ width: '160px' }}
+            style={{ flex: '1 1 150px', minWidth: '140px' }}
             value={departmentFilter}
             onChange={(e) => setDepartmentFilter(e.target.value)}
           >
@@ -195,66 +195,117 @@ export default function Attendance() {
         </div>
       </div>
 
-      {/* Attendance Table */}
+      {/* Attendance Records */}
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <div className="table-container" style={{ border: 'none' }}>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Student ID</th>
-                <th>Name</th>
-                <th>Roll Number</th>
-                <th>Department</th>
-                <th>Class Date</th>
-                <th>Time</th>
-                <th>Status</th>
-                <th>Confidence</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
+        {/* Desktop Table View (>= 768px) */}
+        <div className="desktop-table-view">
+          <div className="table-container" style={{ border: 'none' }}>
+            <table className="table">
+              <thead>
                 <tr>
-                  <td colSpan="8" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-                    Loading attendance records...
-                  </td>
+                  <th>Student ID</th>
+                  <th>Name</th>
+                  <th>Roll Number</th>
+                  <th>Department</th>
+                  <th>Class Date</th>
+                  <th>Time</th>
+                  <th>Status</th>
+                  <th>Confidence</th>
                 </tr>
-              ) : records.length === 0 ? (
-                <tr>
-                  <td colSpan="8" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
-                    <CalendarCheck size={36} style={{ opacity: 0.4, margin: '0 auto 0.5rem' }} />
-                    <p style={{ fontWeight: 600 }}>No attendance records found</p>
-                    <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-                      Try adjusting the date filters or start the live camera.
-                    </p>
-                  </td>
-                </tr>
-              ) : (
-                records.map((rec) => {
-                  const badge = getStatusBadge(rec.status);
-                  return (
-                    <tr key={rec.id}>
-                      <td className="code-font" style={{ fontWeight: 700 }}>
-                        {rec.student_id}
-                      </td>
-                      <td style={{ fontWeight: 600 }}>{rec.name}</td>
-                      <td>{rec.roll_number}</td>
-                      <td>{rec.department} ({rec.section})</td>
-                      <td>{formatDate(rec.attendance_date)}</td>
-                      <td>{formatTime(rec.attendance_time)}</td>
-                      <td>
-                        <span className={badge.className}>
-                          {badge.label}
-                        </span>
-                      </td>
-                      <td style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-                        {rec.confidence_score ? `${rec.confidence_score.toFixed(1)} dist` : 'Manual'}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan="8" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                      Loading attendance records...
+                    </td>
+                  </tr>
+                ) : records.length === 0 ? (
+                  <tr>
+                    <td colSpan="8" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+                      <CalendarCheck size={36} style={{ opacity: 0.4, margin: '0 auto 0.5rem' }} />
+                      <p style={{ fontWeight: 600 }}>No attendance records found</p>
+                      <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+                        Try adjusting the date filters or start the live camera.
+                      </p>
+                    </td>
+                  </tr>
+                ) : (
+                  records.map((rec) => {
+                    const badge = getStatusBadge(rec.status);
+                    return (
+                      <tr key={rec.id}>
+                        <td className="code-font" style={{ fontWeight: 700 }}>
+                          {rec.student_id}
+                        </td>
+                        <td style={{ fontWeight: 600 }}>{rec.name}</td>
+                        <td>{rec.roll_number}</td>
+                        <td>{rec.department} ({rec.section})</td>
+                        <td>{formatDate(rec.attendance_date)}</td>
+                        <td>{formatTime(rec.attendance_time)}</td>
+                        <td>
+                          <span className={badge.className}>
+                            {badge.label}
+                          </span>
+                        </td>
+                        <td style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+                          {rec.confidence_score != null && !isNaN(Number(rec.confidence_score))
+                            ? `${Number(rec.confidence_score).toFixed(1)}%`
+                            : (rec.face_distance != null && !isNaN(Number(rec.face_distance))
+                                ? `${Number(rec.face_distance).toFixed(2)} dist`
+                                : 'Manual')}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Mobile Card List (< 768px) */}
+        <div className="mobile-card-list" style={{ padding: '0.85rem' }}>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+              Loading attendance records...
+            </div>
+          ) : records.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+              <CalendarCheck size={36} style={{ opacity: 0.4, margin: '0 auto 0.5rem' }} />
+              <p style={{ fontWeight: 600 }}>No attendance records found</p>
+            </div>
+          ) : (
+            records.map((rec) => {
+              const badge = getStatusBadge(rec.status);
+              return (
+                <div key={rec.id} className="mobile-card-item">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-main)' }}>
+                      {rec.name}
+                    </span>
+                    <span className={badge.className}>
+                      {badge.label}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    <span>Roll: <strong style={{ color: 'var(--text-main)' }}>{rec.roll_number}</strong></span>
+                    <span>{formatDate(rec.attendance_date)} • {formatTime(rec.attendance_time)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                    <span>{rec.department} ({rec.section})</span>
+                    <span>
+                      {rec.confidence_score != null && !isNaN(Number(rec.confidence_score))
+                        ? `${Number(rec.confidence_score).toFixed(1)}%`
+                        : (rec.face_distance != null && !isNaN(Number(rec.face_distance))
+                            ? `${Number(rec.face_distance).toFixed(2)} dist`
+                            : 'Manual')}
+                    </span>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 
@@ -284,7 +335,7 @@ export default function Attendance() {
             <input
               type="text"
               className="form-control"
-              placeholder="e.g. STD-101"
+              placeholder="Enter student ID"
               value={manualData.student_id}
               onChange={(e) => setManualData({ ...manualData, student_id: e.target.value })}
             />

@@ -5,9 +5,9 @@ import time
 from typing import Dict, List, Optional
 import cv2
 import numpy as np
-from fastapi import APIRouter, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 try:
     import face_recognition
@@ -20,6 +20,7 @@ from backend.services.attendance_service import attendance_service
 from backend.utils.network import get_client_ip
 from backend.database.repository import repo
 from backend.schemas.common import ApiResponse
+from backend.security import require_admin, face_cv_limiter, get_current_user
 
 logger = logging.getLogger("smart_attendance.camera")
 router = APIRouter(prefix="/api/camera", tags=["Camera & Live Recognition"])
@@ -33,11 +34,14 @@ active_stream_state = {
 }
 
 class FrameRecognitionRequest(BaseModel):
-    image_base64: str
+    image_base64: str = Field(..., max_length=12 * 1024 * 1024)
     auto_mark: bool = True
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
-    location_accuracy: Optional[float] = None
+    latitude: Optional[float] = Field(None, ge=-90.0, le=90.0)
+    longitude: Optional[float] = Field(None, ge=-180.0, le=180.0)
+    location_accuracy: Optional[float] = Field(None, ge=0.0, le=10000.0)
+
+class PreviewValidationRequest(BaseModel):
+    image_base64: str = Field(..., max_length=12 * 1024 * 1024)
 
 def generate_live_stream():
     """
@@ -128,7 +132,7 @@ def generate_live_stream():
         cap.release()
 
 @router.get("/stream")
-def video_feed():
+def video_feed(admin: dict = Depends(require_admin)):
     """
     MJPEG live video stream with annotated face detection & 128-D recognition.
     Directly consumable by <img src="/api/camera/stream" /> in React frontend.
@@ -139,7 +143,7 @@ def video_feed():
     )
 
 @router.get("/live-status", response_model=ApiResponse[dict])
-def get_live_status():
+def get_live_status(admin: dict = Depends(require_admin)):
     """Get live attendance recognition events and unknown face count."""
     return ApiResponse(
         success=True,
@@ -152,8 +156,8 @@ def get_live_status():
         }
     )
 
-@router.post("/recognize-frame", response_model=ApiResponse[dict])
-def recognize_frame_snapshot(payload: FrameRecognitionRequest, request: Request):
+@router.post("/recognize-frame", response_model=ApiResponse[dict], dependencies=[Depends(face_cv_limiter)])
+def recognize_frame_snapshot(payload: FrameRecognitionRequest, request: Request, user: dict = Depends(get_current_user)):
     """
     Process an uploaded frame (base64 image from browser camera) for 128-D face recognition.
     Answers dual-mode requirement: allows frontend camera to recognize and mark attendance,
@@ -170,6 +174,14 @@ def recognize_frame_snapshot(payload: FrameRecognitionRequest, request: Request)
         frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         if frame is None:
             raise ValueError("Could not decode image")
+        h, w = frame.shape[:2]
+        if h > 4096 or w > 4096:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Image resolution exceeds maximum allowed limit (4096x4096)."
+            )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -180,7 +192,7 @@ def recognize_frame_snapshot(payload: FrameRecognitionRequest, request: Request)
     detections = recognition_service.process_frame(frame)
     if not detections:
         return ApiResponse(
-            success=False,
+            success=True,
             message="No face detected in camera snapshot.",
             data={"faces_found": 0, "detections": []}
         )
@@ -246,7 +258,9 @@ def recognize_frame_snapshot(payload: FrameRecognitionRequest, request: Request)
                         "section": section,
                         "time": str(rec.get("attendance_time", "")),
                         "status": rec.get("status", "Present"),
-                        "email_notification": rec.get("email_notification", "skipped"),
+                        "email_notification": rec.get("email_notification", "pending"),
+                        "email_status": rec.get("email_status", "pending"),
+                        "email_message_id": rec.get("email_message_id"),
                         "ip_address": client_ip,
                         "latitude": payload.latitude,
                         "longitude": payload.longitude,
@@ -293,10 +307,7 @@ def recognize_frame_snapshot(payload: FrameRecognitionRequest, request: Request)
     )
 
 
-class PreviewValidationRequest(BaseModel):
-    image_base64: str
-
-@router.post("/validate-preview", response_model=ApiResponse[dict])
+@router.post("/validate-preview", response_model=ApiResponse[dict], dependencies=[Depends(face_cv_limiter)])
 def validate_preview_frame(payload: PreviewValidationRequest):
     """
     Real-time face detection & quality validation for registration preview.
@@ -312,6 +323,14 @@ def validate_preview_frame(payload: PreviewValidationRequest):
         frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         if frame is None:
             raise ValueError("Could not decode image")
+        h, w = frame.shape[:2]
+        if h > 4096 or w > 4096:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Image resolution exceeds maximum allowed limit (4096x4096)."
+            )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid image: {e}")
 
@@ -396,7 +415,7 @@ def validate_preview_frame(payload: PreviewValidationRequest):
 
 
 @router.get("/status", response_model=ApiResponse[dict])
-def get_recognition_model_status():
+def get_recognition_model_status(admin: dict = Depends(require_admin)):
     """
     Diagnostic endpoint (Section 24):
     Returns model loaded status, registered student count, and tolerance gate.
@@ -409,14 +428,14 @@ def get_recognition_model_status():
 
 
 @router.post("/retrain", response_model=ApiResponse[dict])
-def retrain_model_endpoint():
+def retrain_model_endpoint(admin: dict = Depends(require_admin)):
     """
-    Hot reload registered encodings from Cloud MySQL into recognition service.
+    Hot reload registered encodings from database into recognition service.
     """
     count = recognition_service.load_registered_students()
     return ApiResponse(
         success=True,
-        message=f"Reloaded {count} student encodings from Cloud MySQL.",
+        message=f"Reloaded {count} student encodings.",
         data=recognition_service.get_status()
     )
 

@@ -24,10 +24,7 @@ def get_system_health():
         "timestamp": datetime.now().isoformat(),
         "database": {
             "connected": db_connected,
-            "message": db_message,
-            "host": settings.DB_HOST,
-            "port": settings.DB_PORT,
-            "database_name": settings.DB_NAME
+            "status": "operational" if db_connected else "offline"
         },
         "camera": {
             "index": settings.CAMERA_INDEX,

@@ -16,12 +16,14 @@ class DatabaseRepository:
     @staticmethod
     def get_student_by_id(student_id: str) -> Optional[Dict[str, Any]]:
         query = """
-            SELECT id, student_id, name, roll_number, department, year, section, email,
+            SELECT id, student_id, name, roll_number, department, year, academic_year, section, email,
                    face_dataset_count, is_trained, model_version, trained_at, created_at, updated_at
             FROM students
             WHERE student_id = %s OR roll_number = %s
+            ORDER BY (student_id = %s) DESC
+            LIMIT 1
         """
-        return execute_query(query, (student_id, student_id), fetchone=True)
+        return execute_query(query, (student_id, student_id, student_id), fetchone=True)
 
     @staticmethod
     def get_all_registered_students() -> List[Dict[str, Any]]:
@@ -120,9 +122,8 @@ class DatabaseRepository:
     def has_student_attended_today(student_id: str, attendance_date: str) -> bool:
         student = DatabaseRepository.get_student_by_id(student_id)
         canonical_id = student["student_id"] if student else student_id
-        roll_num = student.get("roll_number") if student else student_id
-        query = 'SELECT id FROM attendance WHERE (student_id = %s OR student_id = %s) AND attendance_date = %s'
-        row = execute_query(query, (canonical_id, roll_num, attendance_date), fetchone=True)
+        query = 'SELECT id FROM attendance WHERE student_id = %s AND attendance_date = %s'
+        row = execute_query(query, (canonical_id, attendance_date), fetchone=True)
         return bool(row)
 
     @staticmethod
@@ -136,26 +137,50 @@ class DatabaseRepository:
         ip_address: Optional[str] = None,
         latitude: Optional[float] = None,
         longitude: Optional[float] = None,
-        location_accuracy: Optional[float] = None
+        location_accuracy: Optional[float] = None,
+        email_status: str = "pending",
+        email_message_id: Optional[str] = None
     ) -> Tuple[bool, Optional[Dict[str, Any]]]:
         try:
             score = confidence_score if confidence_score is not None else (
                 round((1.0 - face_distance) * 100.0, 1) if face_distance is not None else None
             )
             insert_sql = """
-                INSERT INTO attendance (student_id, attendance_date, attendance_time, status, face_distance, confidence_score, ip_address, latitude, longitude, location_accuracy)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO attendance (
+                    student_id, attendance_date, attendance_time, status,
+                    face_distance, confidence_score, ip_address, latitude,
+                    longitude, location_accuracy, email_status, email_message_id
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
             new_id = execute_query(
                 insert_sql,
-                (student_id, attendance_date, attendance_time, status, face_distance, score, ip_address, latitude, longitude, location_accuracy),
+                (student_id, attendance_date, attendance_time, status, face_distance, score, ip_address, latitude, longitude, location_accuracy, email_status, email_message_id),
                 commit=True
             )
             record = execute_query('SELECT * FROM attendance WHERE id = %s', (new_id,), fetchone=True)
             return True, record
         except Exception as e:
-            logger.warning(f'Could not insert attendance for {student_id} on {attendance_date}: {e}')
+            err_str = str(e)
+            if "1062" in err_str or "Duplicate entry" in err_str:
+                logger.info(f"Duplicate attendance attempt prevented for {student_id} on {attendance_date}")
+            else:
+                logger.warning(f'Could not insert attendance for {student_id} on {attendance_date}: {e}')
             return False, None
+
+    @staticmethod
+    def update_attendance_email_status(
+        attendance_id: int,
+        email_status: str,
+        email_message_id: Optional[str] = None
+    ) -> bool:
+        try:
+            query = "UPDATE attendance SET email_status = %s, email_message_id = %s WHERE id = %s"
+            execute_query(query, (email_status, email_message_id, attendance_id), commit=True)
+            return True
+        except Exception as e:
+            logger.error(f"Error updating email status for attendance record {attendance_id}: {e}")
+            return False
 
     @staticmethod
     def get_student_attendance_stats(student_id: str, attendance_date: Optional[str] = None) -> Dict[str, Any]:
@@ -169,29 +194,28 @@ class DatabaseRepository:
         try:
             student = DatabaseRepository.get_student_by_id(student_id)
             canonical_id = student["student_id"] if student else student_id
-            roll_num = student.get("roll_number") if student else student_id
 
             if not attendance_date:
                 now_ist = datetime.now(ZoneInfo("Asia/Kolkata"))
                 attendance_date = now_ist.strftime("%Y-%m-%d")
 
             today_row = execute_query(
-                "SELECT COUNT(*) AS cnt FROM attendance WHERE (student_id = %s OR student_id = %s) AND attendance_date = %s",
-                (canonical_id, roll_num, attendance_date),
+                "SELECT COUNT(*) AS cnt FROM attendance WHERE student_id = %s AND attendance_date = %s",
+                (canonical_id, attendance_date),
                 fetchone=True
             )
             today_count = int(today_row.get("cnt", 0)) if today_row else 0
 
             total_row = execute_query(
-                "SELECT COUNT(*) AS cnt FROM attendance WHERE student_id = %s OR student_id = %s",
-                (canonical_id, roll_num),
+                "SELECT COUNT(*) AS cnt FROM attendance WHERE student_id = %s",
+                (canonical_id,),
                 fetchone=True
             )
             total_count = int(total_row.get("cnt", 0)) if total_row else 0
 
             last_row = execute_query(
-                "SELECT attendance_date, attendance_time FROM attendance WHERE student_id = %s OR student_id = %s ORDER BY attendance_date DESC, attendance_time DESC, id DESC LIMIT 1",
-                (canonical_id, roll_num),
+                "SELECT attendance_date, attendance_time FROM attendance WHERE student_id = %s ORDER BY attendance_date DESC, attendance_time DESC, id DESC LIMIT 1",
+                (canonical_id,),
                 fetchone=True
             )
             last_time_str = "Not marked"

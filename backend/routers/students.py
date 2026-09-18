@@ -4,8 +4,8 @@ import logging
 from typing import List, Optional
 import cv2
 import numpy as np
-from fastapi import APIRouter, HTTPException, Query, status
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from pydantic import BaseModel, Field
 
 try:
     import face_recognition
@@ -25,20 +25,23 @@ from backend.schemas.student import (
     StudentDetailResponse,
     StudentProfileStats
 )
+from backend.security import require_admin, require_student_or_admin
 
 logger = logging.getLogger("smart_attendance.students_api")
 router = APIRouter(prefix="/api/students", tags=["Students & Dataset"])
 
 class FrameCapturePayload(BaseModel):
-    image_base64: Optional[str] = None
+    image_base64: Optional[str] = Field(None, max_length=12 * 1024 * 1024)
 
 @router.get("", response_model=ApiResponse[List[StudentResponse]])
 def get_students(
-    search: Optional[str] = Query(None, description="Search by Name, Roll Number, or Student ID"),
-    department: Optional[str] = Query(None, description="Filter by Department"),
-    section: Optional[str] = Query(None, description="Filter by Section")
+    search: Optional[str] = Query(None, max_length=100, description="Search by Name, Roll Number, or Student ID"),
+    department: Optional[str] = Query(None, max_length=100, description="Filter by Department"),
+    section: Optional[str] = Query(None, max_length=50, description="Filter by Section"),
+    limit: int = Query(100, ge=1, le=200, description="Maximum results"),
+    admin: dict = Depends(require_admin)
 ):
-    """Retrieve students directory with optional filters."""
+    """Retrieve students directory with optional filters. Restricted to administrators."""
     query = """
         SELECT id, student_id, name, roll_number, department, year, section, email,
                face_dataset_count, is_trained, created_at, updated_at
@@ -59,7 +62,8 @@ def get_students(
         query += " AND section = %s"
         params.append(section)
 
-    query += " ORDER BY created_at DESC"
+    query += " ORDER BY created_at DESC LIMIT %s"
+    params.append(limit)
     rows = execute_query(query, tuple(params), fetchall=True) or []
     return ApiResponse(
         success=True,
@@ -68,8 +72,8 @@ def get_students(
     )
 
 @router.get("/{student_id}", response_model=ApiResponse[StudentDetailResponse])
-def get_student_by_id(student_id: str):
-    """Retrieve student profile with attendance percentage and stats."""
+def get_student_by_id(student_id: str, caller: dict = Depends(require_student_or_admin)):
+    """Retrieve student profile with attendance percentage and stats. Restricted to student owner or admin."""
     student = execute_query(
         "SELECT id, student_id, name, roll_number, department, year, section, email, face_dataset_count, is_trained, created_at, updated_at FROM students WHERE student_id = %s",
         (student_id,),
@@ -110,8 +114,8 @@ def get_student_by_id(student_id: str):
     return ApiResponse(success=True, message="Student profile loaded", data=student)
 
 @router.post("", response_model=ApiResponse[StudentResponse], status_code=status.HTTP_201_CREATED)
-def create_student(payload: StudentCreate):
-    """Register student with duplicate validation. Initializes dataset/<student_id>/ folder."""
+def create_student(payload: StudentCreate, admin: dict = Depends(require_admin)):
+    """Register student with duplicate validation. Restricted to administrators."""
     # Check duplicate student_id
     if execute_query("SELECT id FROM students WHERE student_id = %s", (payload.student_id,), fetchone=True):
         raise HTTPException(
@@ -145,8 +149,8 @@ def create_student(payload: StudentCreate):
     )
 
 @router.put("/{student_id}", response_model=ApiResponse[StudentResponse])
-def update_student(student_id: str, payload: StudentUpdate):
-    """Update student fields."""
+def update_student(student_id: str, payload: StudentUpdate, admin: dict = Depends(require_admin)):
+    """Update student fields. Restricted to administrators."""
     student = execute_query("SELECT * FROM students WHERE student_id = %s", (student_id,), fetchone=True)
     if not student:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found.")
@@ -180,8 +184,8 @@ def update_student(student_id: str, payload: StudentUpdate):
     return ApiResponse(success=True, message="Student updated successfully", data=updated)
 
 @router.delete("/{student_id}", response_model=ApiResponse[dict])
-def delete_student(student_id: str):
-    """Delete student, cascade-delete attendance, remove face data from Cloud MySQL, and reload model."""
+def delete_student(student_id: str, admin: dict = Depends(require_admin)):
+    """Delete student, cascade-delete attendance, remove face data from Cloud MySQL, and reload model. Restricted to administrators."""
     student = execute_query("SELECT * FROM students WHERE student_id = %s", (student_id,), fetchone=True)
     if not student:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found.")
@@ -273,14 +277,14 @@ def enroll_single_face_image(student_id: str, frame: np.ndarray):
         face_encoding_json=encoding_json
     )
     if not saved:
-        return False, "Failed to persist face data in Cloud MySQL.", None
+        return False, "Failed to persist face data.", None
 
     # Hot reload encodings in-memory
     loaded_count = recognition_service.load_registered_students()
 
     logger.info(f"Student {student_id} enrolled. Encodings in memory: {loaded_count}")
 
-    return True, "Face captured and 128-D biometric encoding saved to Cloud MySQL successfully!", {
+    return True, "Face captured and biometric profile saved successfully!", {
         "student_id": student_id,
         "encoding_length": 128,
         "total_registered": loaded_count,
@@ -293,7 +297,11 @@ def enroll_single_face_image(student_id: str, frame: np.ndarray):
 @router.post("/{student_id}/register-face")
 @router.post("/{student_id}/capture")
 @router.post("/{student_id}/capture-frame")
-def capture_and_register_face(student_id: str, payload: FrameCapturePayload):
+def capture_and_register_face(
+    student_id: str,
+    payload: FrameCapturePayload,
+    caller: dict = Depends(require_student_or_admin)
+):
     """
     Capture exactly ONE high-quality reference face image:
     Generates 128-D face encoding, persists to Cloud MySQL, and hot-reloads recognition engine.
@@ -311,6 +319,15 @@ def capture_and_register_face(student_id: str, payload: FrameCapturePayload):
             img_bytes = base64.b64decode(b64_str)
             nparr = np.frombuffer(img_bytes, np.uint8)
             frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            if frame is not None:
+                h, w = frame.shape[:2]
+                if h > 4096 or w > 4096:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Image resolution exceeds maximum allowed limit (4096x4096)."
+                    )
+        except HTTPException:
+            raise
         except Exception as e:
             return {
                 "success": False,
@@ -357,7 +374,10 @@ def capture_and_register_face(student_id: str, payload: FrameCapturePayload):
 
 
 @router.get("/{student_id}/dataset-status")
-def get_student_dataset_status(student_id: str):
+def get_student_dataset_status(
+    student_id: str,
+    caller: dict = Depends(require_student_or_admin)
+):
     """Return dataset statistics, quality metrics, and training readiness."""
     student = execute_query(
         "SELECT id, name, is_trained, face_dataset_count FROM students WHERE student_id = %s",
@@ -384,18 +404,33 @@ def get_student_dataset_status(student_id: str):
             "minimum_required": 1,
             "ready_for_training": has_face,
             "model_version": 1,
-            "engine": "face_recognition (128-D ResNet)"
+            "engine": "Biometric Verification Engine"
         }
     )
 
 
+@router.get("/{student_id}/photo")
+def get_student_photo(
+    student_id: str,
+    caller: dict = Depends(require_student_or_admin)
+):
+    """Serve enrolled reference face photo from Cloud MySQL."""
+    face_record = repo.get_student_face_data(student_id)
+    if not face_record or not face_record.get("image_data"):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Face photo not found.")
+    return Response(content=face_record["image_data"], media_type="image/jpeg")
+
+
 @router.post("/{student_id}/train")
 @router.post("/retrain-global")
-def reload_encodings_endpoint(student_id: Optional[str] = None):
+def reload_encodings_endpoint(
+    student_id: Optional[str] = None,
+    admin: dict = Depends(require_admin)
+):
     """Reload all student face encodings from Cloud MySQL into recognition engine."""
     count = recognition_service.load_registered_students()
     return ApiResponse(
         success=True,
-        message=f"Loaded {count} student encodings from Cloud MySQL into recognition engine.",
+        message=f"Loaded {count} student encodings into recognition engine.",
         data={"registered_count": count}
     )

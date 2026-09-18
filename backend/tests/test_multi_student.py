@@ -85,24 +85,37 @@ def test_repository_face_data_storage():
     enc_json = json.dumps(synth_enc)
     test_bytes = b"JPEG_TEST_REFERENCE_PHOTO_BYTES"
 
-    # Save face data
-    ok = repo.save_face_data(
-        student_id=test_sid,
-        image_filename=f"{test_sid}_ref.jpg",
-        image_bytes=test_bytes,
-        face_encoding_json=enc_json
+    from backend.database.connection import execute_query
+
+    # Ensure parent student exists for MySQL foreign key constraint
+    execute_query(
+        "INSERT IGNORE INTO students (student_id, name, roll_number, department, year, section) VALUES (%s, %s, %s, %s, %s, %s)",
+        (test_sid, "Test Enc Student", "TEST-ENC-01", "CS", "4th Year", "A"),
+        commit=True
     )
-    assert ok is True
 
-    # Retrieve face data
-    record = repo.get_student_face_data(test_sid)
-    assert record is not None
-    assert record["student_id"] == test_sid
-    assert record["face_encoding"] == enc_json
+    try:
+        # Save face data
+        ok = repo.save_face_data(
+            student_id=test_sid,
+            image_filename=f"{test_sid}_ref.jpg",
+            image_bytes=test_bytes,
+            face_encoding_json=enc_json
+        )
+        assert ok is True
 
-    # Delete face data cleanly
-    del_ok = repo.delete_face_data(test_sid)
-    assert del_ok is True
+        # Retrieve face data
+        record = repo.get_student_face_data(test_sid)
+        assert record is not None
+        assert record["student_id"] == test_sid
+        assert record["face_encoding"] == enc_json
 
-    after = repo.get_student_face_data(test_sid)
-    assert after is None
+        # Delete face data cleanly
+        del_ok = repo.delete_face_data(test_sid)
+        assert del_ok is True
+
+        after = repo.get_student_face_data(test_sid)
+        assert after is None
+    finally:
+        execute_query("DELETE FROM students WHERE student_id = %s", (test_sid,), commit=True)
+

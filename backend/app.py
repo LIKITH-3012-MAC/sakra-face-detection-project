@@ -42,31 +42,46 @@ Cloud MySQL        : CONNECTED
     # Shutdown
     logger.info("Shutting down Smart Attendance System...")
 
+from backend.security import (
+    RequestSizeLimitMiddleware,
+    CorrelationIdMiddleware,
+    SecurityHeadersMiddleware,
+    ApiPasskeyMiddleware
+)
+
 app = FastAPI(
     title="Smart Attendance System API",
     description="Automated Face Recognition Attendance System using FastAPI, OpenCV, and Cloud MySQL",
     version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url=None if settings.is_production else "/docs",
+    redoc_url=None if settings.is_production else "/redoc",
+    openapi_url=None if settings.is_production else "/openapi.json",
     lifespan=lifespan
 )
 
-# CORS Configuration
-allowed_origins = [
-    settings.FRONTEND_URL,
+# Security Middlewares (LIFO execution order for incoming requests)
+app.add_middleware(ApiPasskeyMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(CorrelationIdMiddleware)
+app.add_middleware(RequestSizeLimitMiddleware, max_size_bytes=settings.MAX_REQUEST_SIZE_BYTES)
+
+# CORS Configuration (Must wrap outer application to handle preflight OPTIONS and inject headers)
+configured_origins = [o.strip() for o in settings.FRONTEND_URL.split(",") if o.strip()]
+dev_origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:3000",
 ]
-# Filter out duplicates and blanks
-origins = list(set([o for o in allowed_origins if o]))
+origins = list(dict.fromkeys(configured_origins + dev_origins))
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-CSRF-Token", "X-Request-ID", "Accept", "X-API-Passkey"],
+    expose_headers=["X-Request-ID", "X-RateLimit-Limit", "X-RateLimit-Remaining", "Retry-After"]
 )
 
 # Global Exception Handlers for consistent API response format
@@ -87,12 +102,12 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 @app.exception_handler(MySQLError)
 async def mysql_exception_handler(request: Request, exc: MySQLError):
-    logger.error(f"MySQL Error: {exc.msg}")
+    logger.error(f"Database Error: {exc.msg}", exc_info=True)
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
             "success": False,
-            "message": f"Database Error: {exc.msg}",
+            "message": "A database error occurred. Please try again later.",
             "data": None
         }
     )
@@ -116,7 +131,9 @@ from backend.routers import (
     attendance_router,
     camera_router,
     reports_router,
-    recognition_router
+    recognition_router,
+    auth_router,
+    admin_router
 )
 
 app.include_router(health_router)
@@ -125,10 +142,22 @@ app.include_router(attendance_router)
 app.include_router(camera_router)
 app.include_router(reports_router)
 app.include_router(recognition_router)
+app.include_router(auth_router)
+app.include_router(admin_router)
+
 
 @app.get("/")
 def root():
     return {
         "success": True,
         "message": "Smart Attendance System API is running. Visit /docs for API documentation."
+    }
+
+
+@app.get("/health", tags=["Health & System"])
+def health_check():
+    return {
+        "status": "healthy",
+        "service": "Sakra-Lens API",
+        "environment": settings.ENVIRONMENT
     }
