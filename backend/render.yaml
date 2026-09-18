@@ -10,7 +10,7 @@ services:
       - key: ENVIRONMENT
         value: production
       - key: FRONTEND_URL
-        sync: false
+        value: https://lens.sakra-vision.online
       - key: DB_HOST
         sync: false
       - key: DB_PORT

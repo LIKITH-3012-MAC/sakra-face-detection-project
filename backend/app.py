@@ -67,17 +67,18 @@ app.add_middleware(RequestSizeLimitMiddleware, max_size_bytes=settings.MAX_REQUE
 
 # CORS Configuration (Must wrap outer application to handle preflight OPTIONS and inject headers)
 configured_origins = [o.strip() for o in settings.FRONTEND_URL.split(",") if o.strip()]
-dev_origins = [
+known_origins = [
+    "https://lens.sakra-vision.online",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:3000",
 ]
-origins = list(dict.fromkeys(configured_origins + dev_origins))
+origins = list(dict.fromkeys(configured_origins + known_origins))
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origin_regex=r"https://.*(\.vercel\.app|\.sakra-vision\.online)",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "X-CSRF-Token", "X-Request-ID", "Accept", "X-API-Passkey"],
