@@ -24,7 +24,7 @@ from backend.schemas.student import (
     StudentProfileStats
 )
 from backend.security import require_admin, require_student_or_admin
-router = APIRouter(prefix="/api/students", tags=["Students & Dataset"])
+router = APIRouter(prefix="/api/students", tags=["Students & Biometrics"])
 
 class FrameCapturePayload(BaseModel):
     image_base64: Optional[str] = Field(None, max_length=12 * 1024 * 1024)
@@ -383,12 +383,13 @@ def capture_and_register_face(
     }
 
 
+@router.get("/{student_id}/biometric-status")
 @router.get("/{student_id}/dataset-status")
-def get_student_dataset_status(
+def get_student_biometric_status(
     student_id: str,
     caller: dict = Depends(require_student_or_admin)
 ):
-    """Return dataset statistics, quality metrics, and training readiness."""
+    """Return biometric enrollment status and quality metrics from Cloud MySQL."""
     student = execute_query(
         "SELECT id, name, is_trained, face_dataset_count FROM students WHERE student_id = %s",
         (student_id,),
@@ -408,13 +409,14 @@ def get_student_dataset_status(
             "student_name": student["name"],
             "has_face_registered": has_face,
             "is_trained": has_face,
+            "biometric_enrolled": has_face,
             "valid_images": 1 if has_face else 0,
             "total_images": 1 if has_face else 0,
             "target_images": 1,
             "minimum_required": 1,
             "ready_for_training": has_face,
             "model_version": 1,
-            "engine": "Biometric Verification Engine"
+            "engine": "128-D Euclidean Face Embedding Engine"
         }
     )
 
@@ -431,16 +433,21 @@ def get_student_photo(
     return Response(content=face_record["image_data"], media_type="image/jpeg")
 
 
+@router.post("/{student_id}/reload-biometrics")
+@router.post("/reload-biometrics")
 @router.post("/{student_id}/train")
 @router.post("/retrain-global")
 def reload_encodings_endpoint(
     student_id: Optional[str] = None,
     admin: dict = Depends(require_admin)
 ):
-    """Reload all student face encodings from Cloud MySQL into recognition engine."""
+    """
+    Reload registered 128-D student face encodings from Cloud MySQL into recognition engine performance cache.
+    (No neural network retraining is performed; encodings are loaded directly from MySQL).
+    """
     count = recognition_service.load_registered_students()
     return ApiResponse(
         success=True,
-        message=f"Loaded {count} student encodings into recognition engine.",
+        message=f"Loaded {count} student encodings from Cloud MySQL into recognition engine.",
         data={"registered_count": count}
     )

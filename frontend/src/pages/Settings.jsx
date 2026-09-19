@@ -148,18 +148,10 @@ export default function Settings() {
               </p>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Minimum Required Face Dataset Images</label>
-              <input
-                type="number"
-                min="10"
-                max="50"
-                className="form-control"
-                value={settingsData.min_dataset_images}
-                onChange={(e) => setSettingsData({ ...settingsData, min_dataset_images: parseInt(e.target.value) || 25 })}
-              />
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.35rem' }}>
-                Recommended: 25 to 30 images captured with slight head angle rotations.
+            <div className="form-group" style={{ backgroundColor: 'var(--bg-main)', padding: '0.85rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+              <label className="form-label" style={{ marginBottom: '0.25rem', fontWeight: 600 }}>Biometric Enrollment Architecture</label>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', margin: 0 }}>
+                128-D Euclidean Face Embedding (dlib ResNet) stored in Cloud MySQL with single high-quality reference face capture. No multi-image dataset or training folder required.
               </p>
             </div>
 
@@ -232,18 +224,18 @@ export default function Settings() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Shield size={20} color="var(--primary)" />
-              <h3 style={{ fontSize: '1.125rem' }}>Recognition Model Status</h3>
+              <h3 style={{ fontSize: '1.125rem' }}>Biometric Cache Status (Cloud MySQL)</h3>
             </div>
             <span className={recognitionModelStatus?.model_loaded ? 'badge badge-present' : 'badge badge-late'}>
-              {recognitionModelStatus?.model_loaded ? 'Ready ✓' : 'Not Trained'}
+              {recognitionModelStatus?.model_loaded ? 'Active ✓' : 'Standby'}
             </span>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', fontSize: '0.8125rem', marginBottom: '1.25rem' }}>
             <div style={{ padding: '0.75rem', backgroundColor: 'var(--bg-main)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
-              <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>Model Version:</span>
-              <p style={{ fontWeight: 800, fontSize: '1.2rem', color: 'var(--primary)' }}>
-                v{recognitionModelStatus?.model_version ?? 0}
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>Vector Dimension:</span>
+              <p style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--primary)' }}>
+                128-D Euclidean
               </p>
             </div>
 
@@ -255,16 +247,16 @@ export default function Settings() {
             </div>
 
             <div style={{ padding: '0.75rem', backgroundColor: 'var(--bg-main)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
-              <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>Images Used:</span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>Source of Truth:</span>
               <p style={{ fontWeight: 700 }}>
-                {recognitionModelStatus?.trained_images ?? 0}
+                Cloud MySQL
               </p>
             </div>
 
             <div style={{ padding: '0.75rem', backgroundColor: 'var(--bg-main)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
-              <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>Recognition Threshold:</span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>Tolerance Gate:</span>
               <p style={{ fontWeight: 700 }}>
-                {recognitionModelStatus?.threshold ?? 65.0}
+                {recognitionModelStatus?.threshold ?? 65.0}% similarity
               </p>
             </div>
           </div>
@@ -291,7 +283,7 @@ export default function Settings() {
             style={{ width: '100%', justifyContent: 'center' }}
           >
             <RefreshCw size={14} className={retraining ? 'spin-icon' : ''} />
-            {retraining ? 'Retraining Global Model...' : 'Retrain Global Model Now'}
+            {retraining ? 'Syncing Encodings from Cloud MySQL...' : 'Sync Biometric Encodings from Cloud MySQL'}
           </button>
         </div>
       </div>

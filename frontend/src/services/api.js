@@ -77,7 +77,8 @@ export const updateStudent = (studentId, studentData) => client.put(`/api/studen
 export const deleteStudent = (studentId) => client.delete(`/api/students/${studentId}`);
 
 // ----------------------------------------------------
-// Face Dataset & Training APIs
+// ----------------------------------------------------
+// Biometric Face Enrollment & MySQL Encodings Sync APIs
 // ----------------------------------------------------
 export const registerStudentFace = (studentId, imageBase64 = null) =>
   client.post(`/api/students/${studentId}/register-face`, { image_base64: imageBase64 });
@@ -85,7 +86,10 @@ export const registerStudentFace = (studentId, imageBase64 = null) =>
 export const captureFaceFrame = (studentId, imageBase64 = null) =>
   client.post(`/api/students/${studentId}/capture-frame`, { image_base64: imageBase64 });
 
-export const trainStudentModel = (studentId) => client.post(`/api/students/${studentId}/train`);
+export const reloadStudentEncodings = (studentId) => client.post(`/api/students/${studentId}/train`);
+export const trainStudentModel = reloadStudentEncodings;
+
+export const getBiometricStatus = (studentId) => client.get(`/api/students/${studentId}/biometric-status`);
 export const getDatasetStatus = (studentId) => client.get(`/api/students/${studentId}/dataset-status`);
 
 // ----------------------------------------------------

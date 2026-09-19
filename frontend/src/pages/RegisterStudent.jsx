@@ -47,22 +47,14 @@ export default function RegisterStudent() {
 
   // Webcam & Capture State
   const [cameraActive, setCameraActive] = useState(false);
-  const [capturedCount, setCapturedCount] = useState(0);
-  const [minRequired, setMinRequired] = useState(25);
-  const [targetImages, setTargetImages] = useState(30);
   const [isCapturing, setIsCapturing] = useState(false);
-  const [rejectedCount, setRejectedCount] = useState(0);
   const [detectedBbox, setDetectedBbox] = useState(null); // [x, y, w, h]
   const [liveQualityFeedback, setLiveQualityFeedback] = useState(null);
-  const [datasetQualitySummary, setDatasetQualitySummary] = useState(null);
-  const [training, setTraining] = useState(false);
-  const [trainedModelVersion, setTrainedModelVersion] = useState(null);
 
   // Browser Camera Refs
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const canvasRef = useRef(null);
-  const autoCaptureIntervalRef = useRef(null);
   const previewLoopRef = useRef(null);
 
   // Toast
@@ -135,10 +127,6 @@ export default function RegisterStudent() {
       clearInterval(previewLoopRef.current);
       previewLoopRef.current = null;
     }
-    if (autoCaptureIntervalRef.current) {
-      clearInterval(autoCaptureIntervalRef.current);
-      autoCaptureIntervalRef.current = null;
-    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
@@ -209,28 +197,7 @@ export default function RegisterStudent() {
     return canvas.toDataURL('image/jpeg', 0.85);
   };
 
-  // Compute Capture Guidance Phase (Section 19)
-  const getCaptureGuidance = (count) => {
-    if (count < 6) return { phase: 1, text: 'Look directly at camera with neutral expression', icon: '👤' };
-    if (count < 12) return { phase: 2, text: 'Turn your head slightly to the LEFT (~10°)', icon: '👈' };
-    if (count < 18) return { phase: 3, text: 'Turn your head slightly to the RIGHT (~10°)', icon: '👉' };
-    if (count < 24) return { phase: 4, text: 'Tilt head slightly UP and DOWN', icon: '👆' };
-    return { phase: 5, text: 'Slight smile and natural eye movement', icon: '😊' };
-  };
-
-  // Fetch Dataset Summary from Backend
-  const refreshDatasetSummary = async (studentId) => {
-    try {
-      const res = await getDatasetStatus(studentId);
-      if (res.success && res.data) {
-        setDatasetQualitySummary(res.data);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  // Single Face Photo Enrollment (1 Photo -> Biometric Verification Profile)
+  // Single Reference Face Enrollment (1 Photo -> 128-D Embedding in Cloud MySQL)
   const handleCaptureOnePhoto = async () => {
     if (!cameraActive) {
       showToast('Camera is not active. Connect camera first.', 'error');
@@ -244,14 +211,12 @@ export default function RegisterStudent() {
     }
 
     setIsCapturing(true);
-    setLiveQualityFeedback({ valid: true, text: 'Enrolling face biometrics...' });
+    setLiveQualityFeedback({ valid: true, text: 'Validating face and saving biometric embedding...' });
 
     try {
       const studentId = registeredStudent?.student_id;
       const res = await registerStudentFace(studentId, frameBase64);
       if (res.success) {
-        setCapturedCount(1);
-        setTrainedModelVersion(1);
         showToast('Face captured & biometric profile enrolled successfully!', 'success');
         stopCamera();
         setStep(3);
@@ -266,9 +231,6 @@ export default function RegisterStudent() {
       setIsCapturing(false);
     }
   };
-
-  const guidance = getCaptureGuidance(capturedCount);
-  const progressPercentage = Math.min(100, Math.round((capturedCount / targetImages) * 100));
 
   return (
     <div>
@@ -719,10 +681,8 @@ export default function RegisterStudent() {
                   section: 'A',
                   email: ''
                 });
-                setCapturedCount(0);
                 setRegisteredStudent(null);
                 setLiveQualityFeedback(null);
-                setDatasetQualitySummary(null);
               }}
               className="btn btn-secondary"
             >

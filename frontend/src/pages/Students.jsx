@@ -125,7 +125,7 @@ export default function Students() {
         <div>
           <h1 className="page-title">Student Directory</h1>
           <p className="page-subtitle">
-            Manage enrolled students, biometric face datasets, and individual attendance records
+            Manage enrolled students, biometric profiles, and individual attendance records
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -196,8 +196,8 @@ export default function Students() {
                 <th>Roll Number</th>
                 <th>Department</th>
                 <th>Year / Sec</th>
-                <th>Face Dataset</th>
-                <th>Enrolled</th>
+                <th>Biometric Reference</th>
+                <th>Status</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
@@ -214,7 +214,7 @@ export default function Students() {
                     <Users size={36} style={{ opacity: 0.4, margin: '0 auto 0.5rem' }} />
                     <p style={{ fontWeight: 600 }}>No students registered yet</p>
                     <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-                      Register students and capture their face datasets to begin.
+                      Register students and enroll their biometric face profiles to begin.
                     </p>
                   </td>
                 </tr>
@@ -229,14 +229,18 @@ export default function Students() {
                     <td>{student.department}</td>
                     <td>{student.year} - {student.section}</td>
                     <td>
-                      <span className="badge" style={{ backgroundColor: '#f1f5f9', color: '#334155' }}>
-                        {student.face_dataset_count} Images
+                      <span className="badge" style={{
+                        backgroundColor: student.is_trained ? '#ecfdf5' : '#f8fafc',
+                        color: student.is_trained ? '#065f46' : '#64748b',
+                        border: `1px solid ${student.is_trained ? '#a7f3d0' : '#e2e8f0'}`
+                      }}>
+                        {student.is_trained ? 'Reference Enrolled' : 'No Reference'}
                       </span>
                     </td>
                     <td>
                       {student.is_trained ? (
                         <span className="badge badge-present">
-                          <CheckCircle2 size={12} /> Trained
+                          <CheckCircle2 size={12} /> Active
                         </span>
                       ) : (
                         <span className="badge badge-late">
@@ -470,7 +474,7 @@ export default function Students() {
               Are you sure you want to delete {deleteTarget?.name}?
             </p>
             <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-              This action will delete the student profile, all attendance logs, and local face dataset images from the disk. This action cannot be undone.
+              This action will delete the student profile, all attendance logs, and biometric face records from Cloud MySQL. This action cannot be undone.
             </p>
           </div>
         </div>

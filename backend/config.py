@@ -37,28 +37,8 @@ class Settings(BaseSettings):
     FACE_RECOGNITION_DEBUG: bool = True
     MIN_STABLE_RECOGNITIONS: int = 3
 
-    # Paths & Directory Roots
-    DATASET_ROOT: str = ""
-    DATASET_DIR: Path = BASE_DIR / "dataset"
-    MODELS_DIR: Path = BASE_DIR / "models"
+    # Camera Index for server streaming
     CAMERA_INDEX: int = 0
-
-    @property
-    def dataset_path(self) -> Path:
-        """Returns configured DATASET_ROOT path, with fallback to DATASET_DIR if inaccessible."""
-        if self.DATASET_ROOT:
-            p = Path(self.DATASET_ROOT)
-            try:
-                p.mkdir(parents=True, exist_ok=True)
-                test_dir = p / ".write_probe"
-                test_dir.mkdir(exist_ok=True)
-                test_dir.rmdir()
-                return p
-            except Exception:
-                pass
-        fallback = self.DATASET_DIR
-        fallback.mkdir(parents=True, exist_ok=True)
-        return fallback
 
     # Attendance Policy
     ATTENDANCE_CUTOFF_TIME: str = "09:30:00"
@@ -103,6 +83,3 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-# Ensure directories exist
-settings.DATASET_DIR.mkdir(parents=True, exist_ok=True)
-settings.MODELS_DIR.mkdir(parents=True, exist_ok=True)
