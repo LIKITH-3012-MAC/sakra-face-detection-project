@@ -1,6 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "cleanUrls": true,
   "headers": [
     {
       "source": "/assets/(.*)",
@@ -87,7 +86,7 @@
       "destination": "https://sakra-face-detection-project.onrender.com/api/$1"
     },
     {
-      "source": "/((?!assets/|icons/|api/|manifest\\.webmanifest|sw\\.js|favicon\\.svg|.*\\.[\\w]+$).*)",
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ]

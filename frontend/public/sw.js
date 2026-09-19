@@ -1,6 +1,6 @@
 // Sakra-Lens Production Service Worker
-// Version: sakra-lens-v1.0.0
-const CACHE_NAME = 'sakra-lens-v1.0.0';
+// Version: sakra-lens-v1.0.1
+const CACHE_NAME = 'sakra-lens-v1.0.1';
 
 const PRECACHE_ASSETS = [
   '/',
@@ -60,10 +60,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 3. NAVIGATION REQUESTS (SPA Routing): Network-First, fallback to cached /index.html
+  // 3. NAVIGATION REQUESTS (SPA Routing): Network-First, fallback to cached /index.html on 404 or network error
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request).catch(async () => {
+      fetch(request).then(async (response) => {
+        if (!response || response.status === 404) {
+          const cache = await caches.open(CACHE_NAME);
+          const cachedShell = (await cache.match('/index.html')) || (await cache.match('/'));
+          if (cachedShell) return cachedShell;
+        }
+        return response;
+      }).catch(async () => {
         const cache = await caches.open(CACHE_NAME);
         return (await cache.match('/index.html')) || (await cache.match('/'));
       })
