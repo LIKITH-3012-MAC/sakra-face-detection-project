@@ -382,6 +382,7 @@ export default function LiveAttendance() {
   const streamRef = useRef(null);
   const browserLoopRef = useRef(null);
   const successResetTimerRef = useRef(null);
+  const isProcessingFrameRef = useRef(false);
 
   useEffect(() => {
     attendanceModeRef.current = attendanceMode;
@@ -471,8 +472,9 @@ export default function LiveAttendance() {
         const canvas = canvasRef.current;
         if (video.videoWidth === 0 || video.videoHeight === 0) return;
 
-        // Skip processing if currently showing Success or Already Marked card
-        if (uiState === 'SUCCESS' || uiState === 'ALREADY_MARKED') return;
+        // Skip processing if currently showing Success or Already Marked card, or if frame is in-flight
+        if (uiState === 'SUCCESS' || uiState === 'ALREADY_MARKED' || isProcessingFrameRef.current) return;
+        isProcessingFrameRef.current = true;
 
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
@@ -603,6 +605,8 @@ export default function LiveAttendance() {
           }
         } catch (e) {
           // Silent frame catch
+        } finally {
+          isProcessingFrameRef.current = false;
         }
       }, 750);
 

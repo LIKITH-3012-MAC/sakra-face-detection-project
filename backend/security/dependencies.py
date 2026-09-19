@@ -76,13 +76,13 @@ def get_current_user(
 
     if not student_id or not roll_number:
         student_row = execute_query(
-            "SELECT student_id, roll_number FROM students WHERE email = %s",
-            (email,),
+            "SELECT student_id, roll_number FROM students WHERE email = %s OR roll_number = %s OR student_id = %s",
+            (email, roll_number or email, student_id or email),
             fetchone=True
         )
         if student_row:
-            student_id = student_row.get("student_id")
-            roll_number = student_row.get("roll_number")
+            student_id = student_row.get("student_id") or student_id
+            roll_number = student_row.get("roll_number") or roll_number
 
     return {
         "id": user_row["id"],
@@ -137,15 +137,27 @@ class StudentOwnershipChecker:
         user_roll_number = (current_user.get("roll_number") or "").strip()
         user_email = (current_user.get("email") or "").strip().lower()
 
-        # Check match against student_id or roll_number
+        # 1. Allow self-referencing aliases ("me", "self", "@me")
+        if requested_id.lower() in ("me", "self", "@me"):
+            return current_user
+
+        # 2. Check match against verified student_id or roll_number
         if requested_id and (requested_id == user_student_id or requested_id == user_roll_number):
             return current_user
 
-        # If not matched directly, query database to see if requested_id belongs to caller's email
+        # 3. If requested_id represents fallback placeholder from client, allow if user has student identity
+        if requested_id in ("undefined", "null", "N/A") and (user_student_id or user_roll_number):
+            return current_user
+
+        # 4. If not matched directly, query database to see if requested_id belongs to caller's verified records
         if requested_id:
             target_student = repo.get_student_by_id(requested_id)
-            if target_student and (target_student.get("email") or "").strip().lower() == user_email:
-                return current_user
+            if target_student:
+                t_email = (target_student.get("email") or "").strip().lower()
+                t_sid = (target_student.get("student_id") or "").strip()
+                t_roll = (target_student.get("roll_number") or "").strip()
+                if (t_email and t_email == user_email) or (user_student_id and t_sid == user_student_id) or (user_roll_number and t_roll == user_roll_number):
+                    return current_user
 
         # Unauthorized access attempt to another student's record
         auth_service.log_audit(

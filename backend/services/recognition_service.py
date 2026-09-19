@@ -26,7 +26,7 @@ class RecognitionService:
 
     def __init__(self):
         self.tolerance: float = getattr(settings, "FACE_ENCODING_TOLERANCE", 0.50)
-        self.frame_scale: float = 0.25  # Resize frame for faster recognition (as in main.py)
+        self.frame_scale: float = 0.5  # Optimized frame scale (320x240 on 640x480)
         self.known_encodings: List[np.ndarray] = []
         self.known_student_ids: List[str] = []
         self.known_names: List[str] = []
@@ -106,27 +106,36 @@ class RecognitionService:
             logger.error("face_recognition library is not installed.")
             return results
 
-        # Resize webcam frame for faster recognition (as in main.py)
+        # Multi-tier face detection:
+        # First try 0.5x scaled frame for high FPS responsiveness
         small_frame = cv2.resize(frame, (0, 0), fx=self.frame_scale, fy=self.frame_scale)
         rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
-
-        # Detect faces
         face_locations = face_recognition.face_locations(rgb_small_frame)
-        num_faces = len(face_locations)
+        active_rgb = rgb_small_frame
+        active_scale = self.frame_scale
 
+        # If no face found at 0.5x, fallback to full resolution frame
+        if len(face_locations) == 0:
+            rgb_full = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            face_locations = face_recognition.face_locations(rgb_full)
+            if len(face_locations) > 0:
+                active_rgb = rgb_full
+                active_scale = 1.0
+
+        num_faces = len(face_locations)
         if num_faces > 0 and settings.FACE_RECOGNITION_DEBUG:
-            print(f"\n[FACE DETECTED]\nFaces: {num_faces}")
+            print(f"\n[FACE DETECTED]\nFaces: {num_faces} (scale={active_scale})")
 
         # Generate encodings for detected faces
-        face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
+        face_encodings = face_recognition.face_encodings(active_rgb, face_locations)
 
         for face_encoding, face_location in zip(face_encodings, face_locations):
             # Scale coordinates back to original frame size
             top, right, bottom, left = face_location
-            top = int(top / self.frame_scale)
-            right = int(right / self.frame_scale)
-            bottom = int(bottom / self.frame_scale)
-            left = int(left / self.frame_scale)
+            top = int(top / active_scale)
+            right = int(right / active_scale)
+            bottom = int(bottom / active_scale)
+            left = int(left / active_scale)
             bbox = (left, top, right - left, bottom - top)
 
             if len(self.known_encodings) == 0:

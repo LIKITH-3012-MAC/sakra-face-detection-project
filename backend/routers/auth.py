@@ -203,14 +203,49 @@ def get_current_user_profile(current_user: dict = Depends(get_current_user)):
 @router.get("/student/profile", response_model=ApiResponse[dict])
 def get_student_portal_profile(current_user: dict = Depends(get_current_user)):
     """Retrieve full profile, academic info, and attendance metrics for authenticated student."""
-    email = current_user.get("email")
-    student = execute_query(
-        "SELECT id, student_id, name, roll_number, department, year, section, email, is_trained FROM students WHERE email = %s",
-        (email,),
-        fetchone=True
-    )
+    email = (current_user.get("email") or "").strip().lower()
+    cid = current_user.get("student_id")
+    roll = current_user.get("roll_number")
 
-    if not student:
+    student = None
+    # 1. Try matching by verified student_id or roll_number
+    if cid or roll:
+        student = execute_query(
+            """
+            SELECT id, student_id, name, roll_number, department, year, academic_year, section, email, is_trained
+            FROM students
+            WHERE student_id = %s OR roll_number = %s
+            ORDER BY (student_id = %s) DESC
+            LIMIT 1
+            """,
+            (cid or roll, roll or cid, cid or roll),
+            fetchone=True
+        )
+
+    # 2. Fall back to matching by registered email
+    if not student and email:
+        student = execute_query(
+            """
+            SELECT id, student_id, name, roll_number, department, year, academic_year, section, email, is_trained
+            FROM students
+            WHERE email = %s
+            LIMIT 1
+            """,
+            (email,),
+            fetchone=True
+        )
+
+    if student:
+        # Standardize academic year field
+        student["year"] = student.get("year") or student.get("academic_year") or "N/A"
+        # If student record has missing email, synchronize with authenticated user email
+        if email and not student.get("email"):
+            try:
+                execute_query("UPDATE students SET email = %s WHERE id = %s", (email, student["id"]), commit=True)
+                student["email"] = email
+            except Exception:
+                pass
+    else:
         student = {
             "name": current_user.get("name"),
             "email": email,

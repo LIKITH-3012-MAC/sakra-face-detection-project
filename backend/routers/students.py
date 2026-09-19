@@ -303,9 +303,22 @@ def capture_and_register_face(
     Capture exactly ONE high-quality reference face image:
     Generates 128-D face encoding, persists to Cloud MySQL, and hot-reloads recognition engine.
     """
-    student = execute_query("SELECT id, name FROM students WHERE student_id = %s", (student_id,), fetchone=True)
+    target_id = student_id.strip()
+    if target_id.lower() in ("me", "self", "@me") or target_id in ("undefined", "null", "N/A"):
+        target_id = (caller.get("student_id") or caller.get("roll_number") or caller.get("email") or "").strip()
+
+    student = repo.get_student_by_id(target_id)
+    if not student and caller.get("email"):
+        student = execute_query(
+            "SELECT id, student_id, name, roll_number FROM students WHERE email = %s LIMIT 1",
+            (caller["email"].strip().lower(),),
+            fetchone=True
+        )
+
     if not student:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Student '{student_id}' does not exist.")
+
+    canonical_student_id = student["student_id"]
 
     frame = None
     if payload.image_base64:
@@ -340,7 +353,7 @@ def capture_and_register_face(
                 "data": {"captured": False, "reason": "camera_unavailable"}
             }
 
-    success, msg, data = enroll_single_face_image(student_id, frame)
+    success, msg, data = enroll_single_face_image(canonical_student_id, frame)
     if not success:
         return {
             "success": False,

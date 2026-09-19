@@ -229,8 +229,9 @@ def test_rate_limit_cv_recognize_frame_endpoint():
     _, buf = cv2.imencode(".jpg", blank)
     b64 = base64.b64encode(buf).decode("utf-8")
 
-    # 30 allowed requests
-    for _ in range(30):
+    from backend.security.rate_limiter import face_cv_limiter
+    # Allowed requests up to configured limit
+    for _ in range(face_cv_limiter.max_requests):
         res = client.post(
             "/api/camera/recognize-frame",
             json={"image_base64": b64, "auto_mark": False},
@@ -238,7 +239,7 @@ def test_rate_limit_cv_recognize_frame_endpoint():
         )
         assert res.status_code == 200
 
-    # 31st request must trigger 429
+    # (max_requests + 1)th request must trigger 429
     res_blocked = client.post(
         "/api/camera/recognize-frame",
         json={"image_base64": b64, "auto_mark": False},

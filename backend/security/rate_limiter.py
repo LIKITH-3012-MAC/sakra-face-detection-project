@@ -135,5 +135,5 @@ class RateLimitDependency:
 login_limiter = RateLimitDependency(max_requests=5, window_seconds=60, prefix="login", extract_account_key=True)
 otp_request_limiter = RateLimitDependency(max_requests=3, window_seconds=300, prefix="otp_req", extract_account_key=True)
 otp_verify_limiter = RateLimitDependency(max_requests=5, window_seconds=180, prefix="otp_ver", extract_account_key=True)
-face_cv_limiter = RateLimitDependency(max_requests=30, window_seconds=60, prefix="face_cv")
+face_cv_limiter = RateLimitDependency(max_requests=120, window_seconds=60, prefix="face_cv")
 admin_invite_limiter = RateLimitDependency(max_requests=10, window_seconds=3600, prefix="admin_invite")

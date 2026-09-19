@@ -15,15 +15,16 @@ class DatabaseRepository:
 
     @staticmethod
     def get_student_by_id(student_id: str) -> Optional[Dict[str, Any]]:
+        sid = str(student_id).strip()
         query = """
             SELECT id, student_id, name, roll_number, department, year, academic_year, section, email,
                    face_dataset_count, is_trained, model_version, trained_at, created_at, updated_at
             FROM students
-            WHERE student_id = %s OR roll_number = %s
+            WHERE student_id = %s OR roll_number = %s OR CAST(id AS CHAR) = %s
             ORDER BY (student_id = %s) DESC
             LIMIT 1
         """
-        return execute_query(query, (student_id, student_id, student_id), fetchone=True)
+        return execute_query(query, (sid, sid, sid, sid), fetchone=True)
 
     @staticmethod
     def get_all_registered_students() -> List[Dict[str, Any]]:
@@ -80,8 +81,8 @@ class DatabaseRepository:
 
             # 2. Update students table
             execute_query(
-                "UPDATE students SET face_encoding = %s, face_dataset_count = 1, is_trained = TRUE, updated_at = CURRENT_TIMESTAMP WHERE student_id = %s",
-                (face_encoding_json, student_id),
+                "UPDATE students SET face_encoding = %s, face_dataset_count = 1, is_trained = TRUE, updated_at = CURRENT_TIMESTAMP WHERE student_id = %s OR roll_number = %s",
+                (face_encoding_json, student_id, student_id),
                 commit=True
             )
             return True
@@ -99,7 +100,7 @@ class DatabaseRepository:
                    COALESCE(fd.face_encoding, s.face_encoding) as face_encoding,
                    fd.image_filename
             FROM students s
-            LEFT JOIN face_data fd ON s.student_id = fd.student_id
+            LEFT JOIN face_data fd ON (s.student_id = fd.student_id OR s.roll_number = fd.student_id)
             WHERE (fd.face_encoding IS NOT NULL AND fd.face_encoding != '')
                OR (s.face_encoding IS NOT NULL AND s.face_encoding != '')
             ORDER BY s.student_id ASC

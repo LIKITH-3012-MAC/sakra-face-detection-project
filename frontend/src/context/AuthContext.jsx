@@ -28,8 +28,8 @@ export function AuthProvider({ children }) {
         const res = await getCurrentUser();
         if (res?.data) {
           const userData = {
-            email: res.data.sub,
-            full_name: res.data.name,
+            email: res.data.email || res.data.sub,
+            full_name: res.data.full_name || res.data.name,
             role: res.data.role,
             student_id: res.data.student_id,
             roll_number: res.data.roll_number

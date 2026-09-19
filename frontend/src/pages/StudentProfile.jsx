@@ -96,7 +96,9 @@ export default function StudentProfile() {
       ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
       const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
 
-      const studentId = student.student_id;
+      const studentId = (student.student_id && student.student_id !== 'N/A')
+        ? student.student_id
+        : (user?.student_id || user?.roll_number || 'me');
       const res = await registerStudentFace(studentId, dataUrl);
       if (res?.success) {
         setEnrollMsg('Biometric face profile updated successfully!');
