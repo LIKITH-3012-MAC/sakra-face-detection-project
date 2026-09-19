@@ -9,10 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-try:
-    import face_recognition
-except ImportError:
-    face_recognition = None
+from backend.services.biometric_engine import face_recognition, FACE_RECOGNITION_AVAILABLE
 
 from backend.config import settings
 from backend.services.recognition_service import recognition_service

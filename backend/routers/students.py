@@ -8,11 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger("smart_attendance.students_api")
-try:
-    import face_recognition
-except Exception as e:
-    face_recognition = None
-    logger.warning("face_recognition engine not loaded in students router: %s", e)
+from backend.services.biometric_engine import face_recognition, FACE_RECOGNITION_AVAILABLE
 
 from backend.config import settings
 from backend.services.camera_service import camera_manager

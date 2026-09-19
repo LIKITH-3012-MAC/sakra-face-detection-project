@@ -79,3 +79,26 @@ def test_api_recognition_test_no_face():
     body = res.json()
     assert body["data"]["recognized"] is False
     assert body["data"]["status"] == "no_face"
+
+def test_centralized_biometric_engine_single_availability():
+    """Verify biometric_engine defines single application-level availability state."""
+    from backend.services.biometric_engine import FACE_RECOGNITION_AVAILABLE, face_recognition
+    assert isinstance(FACE_RECOGNITION_AVAILABLE, bool)
+
+    if FACE_RECOGNITION_AVAILABLE:
+        assert hasattr(face_recognition, "face_locations")
+        assert hasattr(face_recognition, "face_encodings")
+        assert hasattr(face_recognition, "face_distance")
+    else:
+        assert face_recognition is None
+
+    # Verify recognition_service shares identical engine_available status
+    status = recognition_service.get_status()
+    assert status["engine_available"] == FACE_RECOGNITION_AVAILABLE
+
+    # Verify /api/health shares identical engine_available status
+    res = client.get("/api/health")
+    assert res.status_code == 200
+    health_data = res.json()["data"]
+    assert health_data["engine"]["face_recognition_available"] == FACE_RECOGNITION_AVAILABLE
+

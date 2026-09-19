@@ -22,14 +22,17 @@ async def lifespan(app: FastAPI):
     logger.info("Initializing Smart Attendance System...")
     init_connection_pool()
 
+    from backend.services.biometric_engine import FACE_RECOGNITION_AVAILABLE
     from backend.services.recognition_service import recognition_service
     students = execute_query("SELECT id FROM students", fetchall=True) or []
     encodings_count = recognition_service.load_registered_students()
 
+    engine_status = "ONLINE (dlib ResNet-34 128-D)" if FACE_RECOGNITION_AVAILABLE else "OFFLINE / NOT LOADED"
     banner = f"""
 ==================================================
-SMART ATTENDANCE SYSTEM - ENCODINGS LOADED
+SMART ATTENDANCE SYSTEM - STARTUP & BIOMETRICS
 ==================================================
+Biometric Engine   : {engine_status}
 Registered Students: {len(students)}
 Encodings Loaded   : {encodings_count}
 Tolerance Gate     : {recognition_service.tolerance:.2f}

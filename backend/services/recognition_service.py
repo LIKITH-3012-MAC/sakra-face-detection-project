@@ -6,13 +6,7 @@ import numpy as np
 
 logger = logging.getLogger("smart_attendance.recognition_service")
 
-FACE_RECOGNITION_AVAILABLE = False
-try:
-    import face_recognition
-    FACE_RECOGNITION_AVAILABLE = True
-except Exception as e:
-    face_recognition = None
-    logger.exception("Failed to import face_recognition biometric engine: %s", e)
+from backend.services.biometric_engine import face_recognition, FACE_RECOGNITION_AVAILABLE
 
 from backend.config import settings
 from backend.database.repository import repo

@@ -4,6 +4,8 @@ import cv2
 from backend.config import settings
 from backend.database.connection import check_database_connection
 from backend.schemas.common import ApiResponse
+from backend.services.biometric_engine import FACE_RECOGNITION_AVAILABLE
+from backend.services.recognition_service import recognition_service
 
 router = APIRouter(prefix="/api", tags=["Health & System"])
 
@@ -16,7 +18,6 @@ def get_system_health():
     camera_available = settings.CAMERA_INDEX is not None
 
     # Face recognition & computer vision engine availability
-    from backend.services.recognition_service import recognition_service, FACE_RECOGNITION_AVAILABLE
     model_trained = recognition_service.is_loaded
     opencv_available = hasattr(cv2, "imdecode")
 
