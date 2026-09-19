@@ -9,13 +9,10 @@ for path in (str(CURRENT_DIR), str(REPO_ROOT)):
     if path not in sys.path:
         sys.path.insert(0, path)
 
-from backend.config import settings
-from backend.security.rate_limiter import limiter
+# Export the FastAPI app
 from backend.app import app
-
-__all__ = ["app", "limiter", "settings"]
 
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
-    uvicorn.run("backend.main:app", host="0.0.0.0", port=port)
+    uvicorn.run("main:app", host="0.0.0.0", port=port)

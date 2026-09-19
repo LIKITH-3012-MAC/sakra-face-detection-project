@@ -7,12 +7,8 @@ ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-# Export the FastAPI app, settings, and limiter
-from backend.config import settings
-from backend.security.rate_limiter import limiter
+# Export the FastAPI app
 from backend.app import app
-
-__all__ = ["app", "limiter", "settings"]
 
 if __name__ == "__main__":
     import uvicorn

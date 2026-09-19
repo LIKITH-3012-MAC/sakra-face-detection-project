@@ -61,15 +61,6 @@ class Settings(BaseSettings):
     OTP_EXPIRATION_MINUTES: int = 3
     MAX_OTP_ATTEMPTS: int = 5
     MAX_REQUEST_SIZE_BYTES: int = 10 * 1024 * 1024  # 10MB
-    # Rate Limiting Policies
-    RATE_LIMIT_ENABLED: bool = True
-    RATE_LIMIT_INQUIRY: str = "20/minute"
-    RATE_LIMIT_DEFAULT: str = "60/minute"
-    RATE_LIMIT_LOGIN: str = "5/minute"
-    RATE_LIMIT_OTP: str = "3/minute"
-    RATE_LIMIT_CV: str = "120/minute"
-    RATE_LIMIT_ADMIN: str = "10/minute"
-
     # Attendance & Recognition Threshold Settings
     FACE_RECOGNITION_THRESHOLD: float = 65.0
     MIN_DATASET_IMAGES: int = 25
@@ -77,11 +68,9 @@ class Settings(BaseSettings):
     COOKIE_SECURE: bool = False
     INITIAL_ADMIN_PASSWORD: str = "Sakra"
 
-    # API-Wide Master Passkey Security Layer
+    # API Master Passkey (server-side only)
     API_MASTER_PASSKEY: str = "Mom"
     API_PASSKEY_HEADER: str = "X-API-Passkey"
-    API_PASSKEY_FAIL_LIMIT: int = 10
-    API_PASSKEY_FAIL_WINDOW: int = 60
 
     @property
     def is_production(self) -> bool:

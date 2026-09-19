@@ -8,21 +8,17 @@ export const API_URL =
 
 const client = axios.create({
   baseURL: API_URL,
-  timeout: 15000,
+  timeout: 60000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Request interceptor to attach JWT authorization bearer token & API master passkey
+// Request interceptor to attach JWT authorization bearer token
 client.interceptors.request.use((config) => {
   const token = localStorage.getItem('sakra_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
-  }
-  const passkey = import.meta.env.VITE_API_PASSKEY || 'Mom';
-  if (passkey) {
-    config.headers['X-API-Passkey'] = passkey;
   }
   return config;
 });

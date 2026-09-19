@@ -463,11 +463,12 @@ class AuthService:
         # Resolve associated student details if role is 'user'
         student_id = None
         roll_number = None
-        if user["role"] == "user":
-            student = execute_query("SELECT student_id, roll_number FROM students WHERE email = %s", (email_clean,), fetchone=True)
-            if student:
-                student_id = student["student_id"]
-                roll_number = student["roll_number"]
+        student = execute_query("SELECT student_id, roll_number FROM students WHERE LOWER(email) = %s LIMIT 1", (email_clean,), fetchone=True)
+        if not student and user.get("full_name"):
+            student = execute_query("SELECT student_id, roll_number FROM students WHERE LOWER(name) = %s LIMIT 1", (user["full_name"].strip().lower(),), fetchone=True)
+        if student:
+            student_id = student["student_id"]
+            roll_number = student["roll_number"]
 
         user_data = {
             "id": user["id"],

@@ -9,12 +9,7 @@ from backend.services.auth_service import auth_service
 from backend.utils.network import get_client_ip
 from backend.database.connection import execute_query
 from backend.schemas.common import ApiResponse
-from backend.security import (
-    get_current_user,
-    login_limiter,
-    otp_request_limiter,
-    otp_verify_limiter,
-)
+from backend.security import get_current_user
 
 logger = logging.getLogger("smart_attendance.auth_router")
 router = APIRouter(prefix="/api/auth", tags=["Authentication & Access Control"])
@@ -74,12 +69,11 @@ def _set_auth_cookies(response: Response, token: str) -> str:
     )
     return csrf_token
 
-@router.post("/register-request-otp", response_model=ApiResponse[dict], dependencies=[Depends(otp_request_limiter)])
+@router.post("/register-request-otp", response_model=ApiResponse[dict])
 def request_registration_otp(payload: OTPRequestSchema, request: Request):
     """
     Step 1: Request 6-digit OTP for new student registration.
     Enforces uniqueness, 3-minute expiration, and dispatches notification to the student's email.
-    Rate-limited to prevent email abuse and account enumeration.
     """
     client_ip = get_client_ip(request)
     ok, msg = auth_service.request_registration_otp(payload.email, payload.full_name, client_ip)
@@ -87,7 +81,7 @@ def request_registration_otp(payload: OTPRequestSchema, request: Request):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=msg)
     return ApiResponse(success=True, message=msg, data={"email": payload.email.strip().lower()})
 
-@router.post("/verify-otp", response_model=ApiResponse[dict], dependencies=[Depends(otp_verify_limiter)])
+@router.post("/verify-otp", response_model=ApiResponse[dict])
 def verify_otp(payload: OTPVerifySchema, request: Request):
     """
     Step 2: Verify 6-digit OTP validity, attempt limits (<5), and expiration.
@@ -145,12 +139,11 @@ def register_student(payload: StudentRegistrationSchema, request: Request, respo
 
     return ApiResponse(success=True, message=msg, data=data)
 
-@router.post("/login", response_model=ApiResponse[dict], dependencies=[Depends(login_limiter)])
+@router.post("/login", response_model=ApiResponse[dict])
 def login(payload: LoginSchema, request: Request, response: Response):
     """
     Authenticate existing student or user credentials.
     Sets HttpOnly session cookie, returns bearer token and CSRF token.
-    Rate-limited to prevent brute-force attacks.
     """
     client_ip = get_client_ip(request)
     ok, msg, data = auth_service.login(payload.email, payload.password, client_ip)
@@ -165,7 +158,7 @@ def login(payload: LoginSchema, request: Request, response: Response):
 
     return ApiResponse(success=True, message=msg, data=data)
 
-@router.post("/admin/login", response_model=ApiResponse[dict], dependencies=[Depends(login_limiter)])
+@router.post("/admin/login", response_model=ApiResponse[dict])
 def admin_login(payload: LoginSchema, request: Request, response: Response):
     """
     Authenticate administrator with strict role verification.

@@ -7,7 +7,7 @@ from backend.database.connection import execute_query
 from backend.services.auth_service import auth_service
 from backend.utils.network import get_client_ip
 from backend.schemas.common import ApiResponse
-from backend.security import require_admin, admin_invite_limiter
+from backend.security import require_admin
 
 logger = logging.getLogger("smart_attendance.admin")
 router = APIRouter(prefix="/api/admin", tags=["Administrator Operations"])
@@ -79,7 +79,7 @@ def get_all_admins(admin: dict = Depends(require_admin)):
     ) or []
     return ApiResponse(success=True, message="Administrators retrieved", data=admins)
 
-@router.post("/invite", response_model=ApiResponse[dict], dependencies=[Depends(admin_invite_limiter)])
+@router.post("/invite", response_model=ApiResponse[dict])
 def invite_admin(payload: AdminInviteSchema, request: Request, admin: dict = Depends(require_admin)):
     """
     Grant administrator access to an email address:

@@ -9,7 +9,6 @@ from backend.app import app
 from backend.config import settings
 from backend.database.connection import execute_query
 from backend.services.auth_service import auth_service
-from backend.security.rate_limiter import limiter
 
 client = TestClient(app)
 
@@ -27,11 +26,6 @@ def setup_test_students():
         VALUES ('SEC-STD-002', 'Student Beta', 'ROLL-BETA-02', 'ECE', '4th Year', 'B', 'beta@student.test')
         ON DUPLICATE KEY UPDATE name=VALUES(name)
     """, commit=True)
-
-@pytest.fixture(autouse=True)
-def reset_rate_limits():
-    """Reset sliding window rate limiter before each test."""
-    limiter.clear()
 
 
 def get_admin_token() -> str:
@@ -167,86 +161,6 @@ def test_reports_daily_non_admin_forbidden():
 # ============================================================================
 # VECTORS 12, 13, 14: SLIDING-WINDOW RATE LIMITING
 # ============================================================================
-
-def test_rate_limit_login_endpoint():
-    """Vector 12: Rate limit on /api/auth/login triggers HTTP 429 after 5 requests/min."""
-    test_ip = f"198.51.100.{uuid.uuid4().hex[:6]}"
-    headers = {"X-Forwarded-For": test_ip}
-
-    # 5 allowed attempts
-    for _ in range(5):
-        res = client.post(
-            "/api/auth/login",
-            json={"email": "nonexistent@test.com", "password": "wrong"},
-            headers=headers
-        )
-        assert res.status_code in [400, 401]
-
-    # 6th attempt must be rejected by rate limiter
-    res_blocked = client.post(
-        "/api/auth/login",
-        json={"email": "nonexistent@test.com", "password": "wrong"},
-        headers=headers
-    )
-    assert res_blocked.status_code == 429
-    assert "Too many requests" in res_blocked.json()["detail"]
-
-
-def test_rate_limit_otp_request_endpoint():
-    """Vector 13: Rate limit on /api/auth/register-request-otp triggers HTTP 429 after 3 requests/5min."""
-    test_ip = f"198.51.101.{uuid.uuid4().hex[:6]}"
-    headers = {"X-Forwarded-For": test_ip}
-    repeated_email = f"repeated_otp_{test_ip}@test.com"
-
-    # 3 allowed requests
-    for i in range(3):
-        res = client.post(
-            "/api/auth/register-request-otp",
-            json={"email": repeated_email, "full_name": "Test User"},
-            headers=headers
-        )
-        assert res.status_code in [200, 400]
-
-    # 4th request must be rejected by rate limiter
-    res_blocked = client.post(
-        "/api/auth/register-request-otp",
-        json={"email": repeated_email, "full_name": "Test User"},
-        headers=headers
-    )
-    assert res_blocked.status_code == 429
-
-
-def test_rate_limit_cv_recognize_frame_endpoint():
-    """Vector 14: Rate limit on /api/camera/recognize-frame triggers HTTP 429 after 30 requests/min."""
-    test_ip = f"198.51.102.{uuid.uuid4().hex[:6]}"
-    admin_token = get_admin_token()
-    headers = {
-        "X-Forwarded-For": test_ip,
-        "Authorization": f"Bearer {admin_token}"
-    }
-
-    blank = np.zeros((100, 100, 3), dtype=np.uint8)
-    _, buf = cv2.imencode(".jpg", blank)
-    b64 = base64.b64encode(buf).decode("utf-8")
-
-    from backend.security.rate_limiter import face_cv_limiter
-    # Allowed requests up to configured limit
-    for _ in range(face_cv_limiter.max_requests):
-        res = client.post(
-            "/api/camera/recognize-frame",
-            json={"image_base64": b64, "auto_mark": False},
-            headers=headers
-        )
-        assert res.status_code == 200
-
-    # (max_requests + 1)th request must trigger 429
-    res_blocked = client.post(
-        "/api/camera/recognize-frame",
-        json={"image_base64": b64, "auto_mark": False},
-        headers=headers
-    )
-    assert res_blocked.status_code == 429
-
 
 # ============================================================================
 # VECTORS 15, 16, 17, 18, 19, 20: SECURITY HEADERS, BOUNDS, SIZES, COOKIES

@@ -49,7 +49,6 @@ from backend.security import (
     RequestSizeLimitMiddleware,
     CorrelationIdMiddleware,
     SecurityHeadersMiddleware,
-    ApiPasskeyMiddleware
 )
 
 app = FastAPI(
@@ -63,7 +62,6 @@ app = FastAPI(
 )
 
 # Security Middlewares (LIFO execution order for incoming requests)
-app.add_middleware(ApiPasskeyMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(CorrelationIdMiddleware)
 app.add_middleware(RequestSizeLimitMiddleware, max_size_bytes=settings.MAX_REQUEST_SIZE_BYTES)
@@ -85,7 +83,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "X-CSRF-Token", "X-Request-ID", "Accept", "X-API-Passkey"],
-    expose_headers=["X-Request-ID", "X-RateLimit-Limit", "X-RateLimit-Remaining", "Retry-After"]
+    expose_headers=["X-Request-ID"]
 )
 
 # Global Exception Handlers for consistent API response format

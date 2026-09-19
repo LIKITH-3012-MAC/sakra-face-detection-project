@@ -137,16 +137,26 @@ class StudentOwnershipChecker:
         user_roll_number = (current_user.get("roll_number") or "").strip()
         user_email = (current_user.get("email") or "").strip().lower()
 
+        # Resolve student identity from database by email if missing in token
+        if (not user_student_id or not user_roll_number) and user_email:
+            try:
+                st = repo.get_student_by_email(user_email)
+                if st:
+                    user_student_id = user_student_id or (st.get("student_id") or "").strip()
+                    user_roll_number = user_roll_number or (st.get("roll_number") or "").strip()
+            except Exception:
+                pass
+
         # 1. Allow self-referencing aliases ("me", "self", "@me")
         if requested_id.lower() in ("me", "self", "@me"):
             return current_user
 
-        # 2. Check match against verified student_id or roll_number
-        if requested_id and (requested_id == user_student_id or requested_id == user_roll_number):
+        # 2. Check match against verified student_id, roll_number, or email
+        if requested_id and (requested_id == user_student_id or requested_id == user_roll_number or requested_id.lower() == user_email):
             return current_user
 
-        # 3. If requested_id represents fallback placeholder from client, allow if user has student identity
-        if requested_id in ("undefined", "null", "N/A") and (user_student_id or user_roll_number):
+        # 3. If requested_id represents fallback placeholder from client, allow
+        if requested_id in ("undefined", "null", "N/A", ""):
             return current_user
 
         # 4. If not matched directly, query database to see if requested_id belongs to caller's verified records

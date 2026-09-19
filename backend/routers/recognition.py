@@ -11,7 +11,7 @@ from backend.config import settings
 from backend.services.recognition_service import recognition_service
 from backend.database.repository import repo
 from backend.schemas.common import ApiResponse
-from backend.security import require_admin, face_cv_limiter
+from backend.security import require_admin
 
 logger = logging.getLogger("smart_attendance.recognition_router")
 router = APIRouter(tags=["Recognition & Training Diagnostics"])
@@ -60,7 +60,7 @@ def get_training_status():
         }
     )
 
-@router.post("/api/recognition/test", response_model=ApiResponse[dict], dependencies=[Depends(face_cv_limiter)])
+@router.post("/api/recognition/test", response_model=ApiResponse[dict])
 def test_recognition_endpoint(payload: RecognitionTestRequest):
     """
     Standalone recognition verification endpoint:

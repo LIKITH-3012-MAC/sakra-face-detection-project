@@ -4,20 +4,10 @@ from backend.security.dependencies import (
     require_student_or_admin,
     verify_csrf,
 )
-from backend.security.rate_limiter import (
-    limiter,
-    login_limiter,
-    otp_request_limiter,
-    otp_verify_limiter,
-    face_cv_limiter,
-    admin_invite_limiter,
-    inquiry_limiter,
-)
 from backend.security.middleware import (
     RequestSizeLimitMiddleware,
     CorrelationIdMiddleware,
     SecurityHeadersMiddleware,
-    ApiPasskeyMiddleware,
 )
 
 __all__ = [
@@ -25,15 +15,7 @@ __all__ = [
     "require_admin",
     "require_student_or_admin",
     "verify_csrf",
-    "limiter",
-    "login_limiter",
-    "otp_request_limiter",
-    "otp_verify_limiter",
-    "face_cv_limiter",
-    "admin_invite_limiter",
-    "inquiry_limiter",
     "RequestSizeLimitMiddleware",
     "CorrelationIdMiddleware",
     "SecurityHeadersMiddleware",
-    "ApiPasskeyMiddleware",
 ]

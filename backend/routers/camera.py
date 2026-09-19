@@ -17,7 +17,7 @@ from backend.services.attendance_service import attendance_service
 from backend.utils.network import get_client_ip
 from backend.database.repository import repo
 from backend.schemas.common import ApiResponse
-from backend.security import require_admin, face_cv_limiter, get_current_user
+from backend.security import require_admin, get_current_user
 
 logger = logging.getLogger("smart_attendance.camera")
 router = APIRouter(prefix="/api/camera", tags=["Camera & Live Recognition"])
@@ -153,7 +153,7 @@ def get_live_status(admin: dict = Depends(require_admin)):
         }
     )
 
-@router.post("/recognize-frame", response_model=ApiResponse[dict], dependencies=[Depends(face_cv_limiter)])
+@router.post("/recognize-frame", response_model=ApiResponse[dict])
 def recognize_frame_snapshot(payload: FrameRecognitionRequest, request: Request, user: dict = Depends(get_current_user)):
     """
     Process an uploaded frame (base64 image from browser camera) for 128-D face recognition.
@@ -304,7 +304,7 @@ def recognize_frame_snapshot(payload: FrameRecognitionRequest, request: Request,
     )
 
 
-@router.post("/validate-preview", response_model=ApiResponse[dict], dependencies=[Depends(face_cv_limiter)])
+@router.post("/validate-preview", response_model=ApiResponse[dict])
 def validate_preview_frame(payload: PreviewValidationRequest):
     """
     Real-time face detection & quality validation for registration preview.
