@@ -409,51 +409,47 @@ export default function WelcomeAuth() {
   // Render: Main Authentication & Enrollment Screen
   // ----------------------------------------------------
   return (
-    <div style={{
-      minHeight: '100vh',
+    <div className="auth-page-container" style={{
       backgroundColor: 'var(--bg-app)',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '2rem 1rem',
       fontFamily: 'Inter, system-ui, sans-serif'
     }}>
-      {/* Brand Header */}
-      <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
-        <div style={{
-          width: '54px',
-          height: '54px',
-          borderRadius: '14px',
-          background: 'linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          margin: '0 auto 0.75rem auto',
-          color: 'white',
-          boxShadow: '0 4px 14px rgba(79, 70, 229, 0.35)'
-        }}>
-          <ShieldCheck size={32} />
-        </div>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em', margin: 0 }}>
-          Sakra-Lens
-        </h1>
-        <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-          Smart Attendance & Biometric Face Verification
-        </p>
-      </div>
-
-      {/* Main Auth Container Card */}
-      <div style={{
-        width: '100%',
-        maxWidth: regStep === 4 ? '560px' : '480px',
-        backgroundColor: 'var(--bg-surface)',
-        borderRadius: 'var(--radius-lg)',
-        border: '1px solid var(--border-color)',
-        boxShadow: '0 8px 30px rgba(0,0,0,0.06)',
-        overflow: 'hidden',
-        transition: 'max-width 0.3s ease'
+      <div className="auth-card-wrapper" style={{
+        maxWidth: regStep === 4 ? '560px' : '480px'
       }}>
+        {/* Brand Header */}
+        <div style={{ textAlign: 'center', marginBottom: '1.75rem', width: '100%' }}>
+          <div style={{
+            width: '54px',
+            height: '54px',
+            borderRadius: '14px',
+            background: 'linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 0.75rem auto',
+            color: 'white',
+            boxShadow: '0 4px 14px rgba(79, 70, 229, 0.35)'
+          }}>
+            <ShieldCheck size={32} />
+          </div>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em', margin: 0 }}>
+            Sakra-Lens
+          </h1>
+          <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+            Smart Attendance & Biometric Face Verification
+          </p>
+        </div>
+
+        {/* Main Auth Container Card */}
+        <div style={{
+          width: '100%',
+          backgroundColor: 'var(--bg-surface)',
+          borderRadius: 'var(--radius-lg)',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 8px 30px rgba(0,0,0,0.06)',
+          overflow: 'hidden',
+          transition: 'max-width 0.3s ease'
+        }}>
         {/* Tab Switcher */}
         <div style={{
           display: 'grid',
@@ -1138,5 +1134,6 @@ export default function WelcomeAuth() {
         </div>
       </div>
     </div>
+  </div>
   );
 }

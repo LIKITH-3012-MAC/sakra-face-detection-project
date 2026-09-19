@@ -49,6 +49,7 @@ export default function StudentProfile() {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
       }
+      document.body.style.overflow = '';
     };
   }, []);
 
@@ -272,7 +273,10 @@ export default function StudentProfile() {
             borderRadius: 'var(--radius-lg)',
             maxWidth: '520px',
             width: '100%',
-            padding: '1.75rem',
+            maxHeight: 'calc(100dvh - 2rem)',
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            padding: '1.5rem',
             boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)'
           }}>
             <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 0.5rem 0' }}>
@@ -318,7 +322,7 @@ export default function StudentProfile() {
 
             <div style={{
               width: '100%',
-              height: '280px',
+              height: 'clamp(200px, 35vh, 280px)',
               borderRadius: 'var(--radius-md)',
               overflow: 'hidden',
               backgroundColor: '#0f172a',

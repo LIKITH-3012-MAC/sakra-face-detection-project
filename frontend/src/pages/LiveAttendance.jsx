@@ -815,7 +815,7 @@ export default function LiveAttendance() {
           style={{
             width: '100%',
             maxWidth: '420px',
-            minHeight: '680px',
+            minHeight: 'min(680px, 90vh)',
             backgroundColor: '#061a12',
             backgroundImage: 'radial-gradient(circle at 50% 20%, #0d3824 0%, #061a12 65%, #020d09 100%)',
             borderRadius: '36px',
@@ -1577,7 +1577,7 @@ export default function LiveAttendance() {
           from { opacity: 0; transform: scale(0.92); }
           to { opacity: 1; transform: scale(1); }
         }
-        @media (max-width: 768px) {
+        @media (max-width: 899px) {
           .phone-scanner-frame {
             max-width: 100% !important;
             border-radius: 24px !important;

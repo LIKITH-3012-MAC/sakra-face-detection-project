@@ -6,8 +6,16 @@ export default function Modal({ isOpen, onClose, title, children, footer, maxWid
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) onClose();
     };
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
@@ -34,7 +42,7 @@ export default function Modal({ isOpen, onClose, title, children, footer, maxWid
           boxShadow: 'var(--shadow-lg)',
           width: '100%',
           maxWidth,
-          maxHeight: '90vh',
+          maxHeight: 'calc(100dvh - 2rem)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden'

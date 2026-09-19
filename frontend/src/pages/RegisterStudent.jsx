@@ -528,7 +528,7 @@ export default function RegisterStudent() {
             position: 'relative',
             width: '100%',
             maxWidth: '640px',
-            height: '420px',
+            height: 'clamp(240px, 50vw, 420px)',
             margin: '0 auto 1.25rem',
             backgroundColor: '#0f172a',
             borderRadius: 'var(--radius-md)',
@@ -567,8 +567,8 @@ export default function RegisterStudent() {
                 position: 'absolute',
                 border: '2px dashed rgba(255, 255, 255, 0.65)',
                 borderRadius: '50%',
-                width: '230px',
-                height: '290px',
+                width: 'clamp(150px, 45vw, 230px)',
+                height: 'clamp(190px, 55vw, 290px)',
                 pointerEvents: 'none',
                 boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.28)'
               }} />

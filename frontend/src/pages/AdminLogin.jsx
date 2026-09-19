@@ -44,17 +44,11 @@ export default function AdminLogin() {
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
+    <div className="auth-page-container" style={{
       backgroundColor: '#0f172a',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '2rem 1rem',
       fontFamily: 'Inter, system-ui, sans-serif'
     }}>
-      <div style={{ width: '100%', maxWidth: '440px' }}>
+      <div className="auth-card-wrapper" style={{ maxWidth: '440px' }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div style={{

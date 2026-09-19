@@ -34,10 +34,9 @@
   padding: 0;
 }
 
-html, body {
-  overflow-x: hidden;
-  max-width: 100vw;
-  width: 100%;
+html {
+  overflow-x: clip;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -47,12 +46,26 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   padding-bottom: env(safe-area-inset-bottom, 0px);
+  overflow-x: clip;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+#root {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: clip;
+  width: 100%;
 }
 
 /* App Layout */
 .app-container {
   display: flex;
   min-height: 100vh;
+  min-height: 100dvh;
+  flex: 1;
 }
 
 .main-content {
@@ -215,6 +228,27 @@ h1, h2, h3, h4, h5 {
   border-radius: 9999px;
 }
 
+/* Auth Pages Responsive Layout */
+.auth-page-container {
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: max(1.5rem, env(safe-area-inset-top, 1.5rem)) 1rem max(1.5rem, env(safe-area-inset-bottom, 1.5rem)) 1rem;
+  box-sizing: border-box;
+}
+
+.auth-card-wrapper {
+  width: 100%;
+  margin: auto 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 /* Form Controls */
 .form-group {
   margin-bottom: 1.25rem;
@@ -253,9 +287,15 @@ h1, h2, h3, h4, h5 {
 }
 
 /* Tables */
-.table-container {
+.table-container,
+.desktop-table-view {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
   border-radius: var(--radius-md);
+}
+
+.table-container {
   border: 1px solid var(--border-color);
   background: var(--bg-surface);
 }
@@ -419,6 +459,8 @@ h1, h2, h3, h4, h5 {
   .app-container {
     display: block !important;
     min-height: 100vh;
+    min-height: 100dvh;
+    flex: 1;
   }
 
   .main-content {
@@ -428,6 +470,7 @@ h1, h2, h3, h4, h5 {
 
   .page-body {
     padding: 0.85rem 0.85rem 2.5rem 0.85rem !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 96px) !important;
     max-width: 100% !important;
   }
 
@@ -502,13 +545,7 @@ h1, h2, h3, h4, h5 {
 
   /* Extra bottom padding on page-body so content never clips behind bottom nav bar */
   .page-body {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 84px) !important;
-  }
-
-  /* Prevent awkward elastic bounce pull-down in standalone app mode */
-  body {
-    overscroll-behavior-y: none;
-    -webkit-overflow-scrolling: touch;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 96px) !important;
   }
 }
 
@@ -521,6 +558,7 @@ button:active,
 /* Standalone Installed PWA Display Mode Tweaks */
 @media all and (display-mode: standalone) {
   body {
+    overscroll-behavior-y: contain;
     user-select: none;
     -webkit-user-select: none;
   }
