@@ -11,6 +11,7 @@ from backend.security.rate_limiter import (
     otp_verify_limiter,
     face_cv_limiter,
     admin_invite_limiter,
+    inquiry_limiter,
 )
 from backend.security.middleware import (
     RequestSizeLimitMiddleware,
@@ -30,6 +31,7 @@ __all__ = [
     "otp_verify_limiter",
     "face_cv_limiter",
     "admin_invite_limiter",
+    "inquiry_limiter",
     "RequestSizeLimitMiddleware",
     "CorrelationIdMiddleware",
     "SecurityHeadersMiddleware",

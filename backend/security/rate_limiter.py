@@ -1,13 +1,63 @@
 import time
 import logging
 import threading
-from typing import Dict, List, Optional
+import functools
+import inspect
+from typing import Dict, List, Optional, Any, Callable
 from fastapi import HTTPException, Request, status
 
 from backend.config import settings
 from backend.utils.network import get_client_ip
 
 logger = logging.getLogger("smart_attendance.rate_limiter")
+
+
+def _parse_rate_limit(rate_str: Any) -> tuple[int, int]:
+    """
+    Parse a rate limit string like '20/minute', '5/second', '100/hour', '10/min',
+    or integer into (max_requests, window_seconds).
+    """
+    if isinstance(rate_str, (int, float)):
+        return int(rate_str), 60
+    if not isinstance(rate_str, str):
+        return 60, 60
+
+    rate_str = rate_str.strip().lower()
+    if "/" not in rate_str:
+        try:
+            return int(rate_str), 60
+        except ValueError:
+            return 60, 60
+
+    count_str, period_str = rate_str.split("/", 1)
+    try:
+        max_requests = int(count_str.strip())
+    except ValueError:
+        max_requests = 60
+
+    period_str = period_str.strip()
+    if period_str in ("s", "sec", "second", "seconds"):
+        window_seconds = 1
+    elif period_str in ("m", "min", "minute", "minutes"):
+        window_seconds = 60
+    elif period_str in ("h", "hr", "hour", "hours"):
+        window_seconds = 3600
+    elif period_str in ("d", "day", "days"):
+        window_seconds = 86400
+    else:
+        window_seconds = 60
+
+    return max_requests, window_seconds
+
+
+def _find_request(args: tuple, kwargs: dict) -> Optional[Any]:
+    for arg in args:
+        if isinstance(arg, Request) or hasattr(arg, "client") or hasattr(arg, "headers"):
+            return arg
+    for v in kwargs.values():
+        if isinstance(v, Request) or hasattr(v, "client") or hasattr(v, "headers"):
+            return v
+    return None
 
 
 class SlidingWindowRateLimiter:
@@ -74,6 +124,58 @@ class SlidingWindowRateLimiter:
         with self._lock:
             self._buckets.clear()
 
+    def limit(self, limit_value: Any = "60/minute", key_func: Optional[Callable] = None, **decorator_kwargs):
+        """
+        Route decorator providing slowapi-compatible rate limiting:
+        @limiter.limit(settings.RATE_LIMIT_INQUIRY)
+        or
+        @limiter.limit("20/minute")
+        """
+        max_requests, window_seconds = _parse_rate_limit(limit_value)
+
+        def decorator(func: Callable):
+            if inspect.iscoroutinefunction(func):
+                @functools.wraps(func)
+                async def async_wrapper(*args, **kwargs):
+                    req = _find_request(args, kwargs)
+                    if req is not None:
+                        client_key = key_func(req) if key_func and callable(key_func) else get_client_ip(req)
+                        rate_key = f"{func.__name__}:{client_key}"
+                        allowed, remaining, retry_after = self.is_allowed(rate_key, max_requests, window_seconds)
+                        if not allowed:
+                            raise HTTPException(
+                                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                                detail=f"Too many requests. Please slow down and try again in {retry_after} seconds.",
+                                headers={
+                                    "Retry-After": str(retry_after),
+                                    "X-RateLimit-Limit": str(max_requests),
+                                    "X-RateLimit-Remaining": "0"
+                                }
+                            )
+                    return await func(*args, **kwargs)
+                return async_wrapper
+            else:
+                @functools.wraps(func)
+                def sync_wrapper(*args, **kwargs):
+                    req = _find_request(args, kwargs)
+                    if req is not None:
+                        client_key = key_func(req) if key_func and callable(key_func) else get_client_ip(req)
+                        rate_key = f"{func.__name__}:{client_key}"
+                        allowed, remaining, retry_after = self.is_allowed(rate_key, max_requests, window_seconds)
+                        if not allowed:
+                            raise HTTPException(
+                                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                                detail=f"Too many requests. Please slow down and try again in {retry_after} seconds.",
+                                headers={
+                                    "Retry-After": str(retry_after),
+                                    "X-RateLimit-Limit": str(max_requests),
+                                    "X-RateLimit-Remaining": "0"
+                                }
+                            )
+                    return func(*args, **kwargs)
+                return sync_wrapper
+        return decorator
+
 
 # Global limiter engine
 limiter = SlidingWindowRateLimiter()
@@ -137,3 +239,4 @@ otp_request_limiter = RateLimitDependency(max_requests=3, window_seconds=300, pr
 otp_verify_limiter = RateLimitDependency(max_requests=5, window_seconds=180, prefix="otp_ver", extract_account_key=True)
 face_cv_limiter = RateLimitDependency(max_requests=120, window_seconds=60, prefix="face_cv")
 admin_invite_limiter = RateLimitDependency(max_requests=10, window_seconds=3600, prefix="admin_invite")
+inquiry_limiter = RateLimitDependency(max_requests=20, window_seconds=60, prefix="inquiry")
